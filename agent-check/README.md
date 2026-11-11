@@ -3,6 +3,7 @@
 A one-page tool for whoever sets the rules for other people's AI agents. Open `index.html` in a browser, tick what one agent connects to, and you get:
 
 - **The count:** three lamps (untrusted input, sensitive data, acts or sends). Any two can be fine; all three needs a person in the loop or a lamp dimmed.
+- **Which agent:** pick Grok Bot, dots, Claude Duet, Muse, OpenClaw, Hermes Agent or a custom agent. Each shows key facts as of November 2026, whether a company-controlled plan exists, the settings that help, and a link to current docs. Where no company plan exists, "can I have one?" says so.
 - **Common MCP servers:** ten popular servers (GitHub, Slack, Google Drive, Notion, Jira and Confluence, Salesforce, Asana, Supabase, a Playwright browser and the filesystem server), each with the settings that decide which lamps it lights, the settings that help, a real incident where one is public, and a link to its current docs.
 - **The doors:** where you can still enforce rules (device, agent app, network, identity), given where the agent runs.
 - **"Can I have one?":** yes on these terms, or not this one, not yet, with a reply you can send.
@@ -21,7 +22,7 @@ Use at your own risk. This tool is provided as is, with no warranty. Products, s
 
 ## Updating the server list
 
-The servers live in the `SERVERS` list near the top of the script in `index.html`. Each option says which lamps it lights. If a server has changed, or you'd like one added, open an issue with a link to the vendor's docs.
+The agents live in the `AGENTS` list and the servers in the `SERVERS` list near the top of the script in `index.html`. Each option says which lamps it lights. If a server has changed, or you'd like one added, open an issue with a link to the vendor's docs.
 
 ## Sources for the ideas
 
