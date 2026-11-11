@@ -1,6 +1,6 @@
 # Controls: from "not approved yet" to "approved"
 
-An agent is approved when four conditions are met, plus two more that depend on what it can reach. These are the controls that meet each one, marked as policy and process (rules and routines people follow) or technical (settings and tools that enforce it). The same list appears in the tool, filtered to whatever is missing for the agent you describe.
+An agent is approved when four conditions are met, plus two more that depend on what it can reach. These are the controls that meet each one, marked as policy and process (rules and routines people follow) or technical (settings and tools that enforce it). Logging and alerting are recommended rather than required. The same list appears in the tool, filtered to whatever is missing for the agent you describe.
 
 Current as of November 2026. A thinking aid, not an assessment of any product, and not legal or compliance advice.
 
@@ -71,3 +71,13 @@ Current as of November 2026. A thinking aid, not an assessment of any product, a
 - Ask the vendor what it records, for how long, and how you get it.
 - Where an export exists, send it to your own log store.
 - Keep your own logs at the systems the agent touches: your search tool, mail, and payments.
+
+## Recommended: alert on unusual activity
+
+*Technical.* Logs explain a bad day afterwards; alerts shorten it. In the video, the alarm was a supplier on the phone.
+
+- Decide what "unusual" means for this agent: new recipients or domains, bulk reads or exports, payment-detail edits, bursts out of hours.
+- Alert on changes to its tools too: a new server, or a changed tool description.
+- Send alerts to someone who can act, and copy the agent's owner.
+- Where the product exports activity (audit logs or telemetry), feed it into the monitoring you already run.
+- Test it before approval: trigger one alert on purpose.
