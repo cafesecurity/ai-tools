@@ -46,7 +46,10 @@ body {
 .videolink .go { font-size: 15px; font-weight: 600; color: var(--accent); }
 header h1 { font-size: 38px; line-height: 1.1; margin: 0 0 8px; text-wrap: balance; }
 header h1 span { color: var(--accent); }
-header p { margin: 0; max-width: 62ch; color: var(--muted); }
+header p { margin: 0; max-width: 66ch; color: var(--muted); }
+header ol.how { margin: 10px 0 10px; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 8px; counter-reset: how; }
+header ol.how li { counter-increment: how; background: var(--panel); border: 1px solid var(--line); border-radius: 999px; padding: 6px 14px 6px 8px; font-size: 15px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+header ol.how li::before { content: counter(how); width: 24px; height: 24px; border-radius: 50%; background: var(--accent); color: #1B1403; font-family: var(--mono); font-size: 14px; display: grid; place-items: center; }
 .bar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 18px 0 26px; }
 .pick { display: flex; gap: 8px; align-items: center; font-size: 15px; color: var(--muted); font-weight: 500; }
 .pick select { width: auto; max-width: 100%; border-radius: 999px; padding: 8px 14px; font-weight: 600; }
@@ -176,7 +179,13 @@ footer a { color: var(--lamp-a); }
   <header>
     <a class="videolink" href="https://youtu.be/QffClw8TdN4"><span class="play" aria-hidden="true"></span><span><small>Companion to the video</small>Securing AI Agents at Work</span><span class="go" aria-hidden="true">Watch on YouTube &rarr;</span></a>
     <h1>AI Agent Check: <span>can we say yes to this agent?</span></h1>
-    <p>Tick what one AI agent connects to. You get the three-lamp count, the doors where you can still enforce rules, an answer to "can I have one?", and a one-page brief to keep. Nothing you type leaves this page.</p>
+    <p>AI agents read your email, use your apps and act for you. The risk is in the combination: an agent that reads what outsiders write, can reach sensitive data, and can send or change things can be tricked into leaking or acting. Check one agent in three steps:</p>
+    <ol class="how">
+      <li>Pick the agent and where it runs.</li>
+      <li>Tick what it can reach.</li>
+      <li>Tick the safeguards already in place.</li>
+    </ol>
+    <p>You'll see which of the three risks it has, where you can still enforce rules, a "yes" or "not yet" with what's missing, and a one-page summary to keep. Nothing you enter leaves this page.</p>
   </header>
   <div class="bar">
     <span class="tag" id="mode"></span>
