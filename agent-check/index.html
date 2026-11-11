@@ -324,6 +324,7 @@ const CTRLS = [
   {id: 'list', g: 'tech', t: 'It can connect only to servers on our list', s: 'Enforced by the agent app\'s allowlist or a gateway, and a changed tool description gets reviewed again. A list on paper alone does not count.'},
   {id: 'human', g: 'tech', t: 'A person approves what it sends, pays or changes', s: 'Set in the product or a gateway, and including edits to records, not only "send" and "pay".'},
   {id: 'logs', g: 'tech', rec: 1, t: 'Its activity is logged where we can review it', s: 'What it read, sent and changed, in logs we hold or can export when we need them. Vendor-only logs we cannot get do not count.'},
+  {id: 'alerts', g: 'tech', rec: 1, t: 'Unusual activity raises an alert', s: 'Someone who can act is told when it sends to new recipients, reads in bulk, changes payment details, or gains a new or changed tool. Logs alone only help after the fact.'},
 ];
 // The controls behind each condition: what to do to turn "not approved yet" into "approved".
 const CONTROLS = {
@@ -373,6 +374,13 @@ const CONTROLS = {
     'Ask the vendor what it records, for how long, and how you get it.',
     'Where an export exists, send it to your own log store.',
     'Keep your own logs at the systems the agent touches: your search tool, mail, and payments.',
+  ]},
+  alerts: {g: 'tech', h: 'Alert on unusual activity', why: 'Logs explain a bad day afterwards; alerts shorten it. In the video, the alarm was a supplier on the phone.', c: [
+    'Decide what "unusual" means for this agent: new recipients or domains, bulk reads or exports, payment-detail edits, bursts out of hours.',
+    'Alert on changes to its tools too: a new server, or a changed tool description.',
+    'Send alerts to someone who can act, and copy the agent\'s owner.',
+    'Where the product exports activity (audit logs or telemetry), feed it into the monitoring you already run.',
+    'Test it before approval: trigger one alert on purpose.',
   ]},
 };
 const LAMPS = {A: ['Untrusted input', 'It reads things outsiders can write', 'Untrusted'], B: ['Sensitive data', 'It can reach things that matter', 'Sensitive'], C: ['Acts or sends', 'It can change things or send them out', 'Acts']};
@@ -499,7 +507,7 @@ const EXAMPLES = [
     note: 'Assumes: a personal subscription signed in to work mail, calendar and files, relying on the product asking before it sends. No company contract covers the data.'},
   {title: 'Muse on a personal account, marketing', agent: 'muse', name: 'Muse (marketing)', owner: 'Marketing manager', run: 'cloud', recheck: '', conns: ['web', 'send'], ctrls: ['narrow'], logs: 'vendor',
     note: 'Assumes: a personal account used to research the public web and send messages, with no company data connected. No sensitive data in reach, so the risk is acceptable; the terms are what fail.'},
-  {title: 'Hermes Agent on a server we run, behind our gateway', agent: 'hermes', name: 'Hermes Agent (internal)', owner: 'Platform team lead', run: 'server', recheck: '+90', conns: ['files', 'code', 'mcpok', 'exec'], ctrls: ['plan', 'narrow', 'list', 'human'], logs: 'ours',
+  {title: 'Hermes Agent on a server we run, behind our gateway', agent: 'hermes', name: 'Hermes Agent (internal)', owner: 'Platform team lead', run: 'server', recheck: '+90', conns: ['files', 'code', 'mcpok', 'exec'], ctrls: ['plan', 'narrow', 'list', 'human', 'alerts'], logs: 'ours',
     note: 'Assumes: self-hosted on our own server, reading internal files and code only, with no inbox or web access. No untrusted input, so nothing outsiders write reaches it.'},
 ];
 const BLANK = {agent: 'custom', name: '', owner: '', run: 'laptop', recheck: '', conns: [], ctrls: [], logs: 'ours'};
@@ -640,7 +648,7 @@ function render() {
 
   // ---- getting to yes ----
   const fixes = miss.map((m) => m[0]);
-  const soft = picked.length && s.logs !== 'ours' ? ['logs'] : [];
+  const soft = !picked.length ? [] : [...(s.logs !== 'ours' ? ['logs'] : []), ...(!s.has('alerts') ? ['alerts'] : [])];
   const card = (id, cls) => `<div class="card ${cls}"><span class="kind">${CONTROLS[id].g === 'policy' ? 'Policy and process' : 'Technical'}</span><h3>${CONTROLS[id].h}</h3><p class="why">${CONTROLS[id].why}</p><ul>${CONTROLS[id].c.map((c) => `<li>${esc(c)}</li>`).join('')}</ul></div>`;
   $('toyes').innerHTML = !picked.length ? '' : yes
     ? `<h2>Keeping it approved</h2><p>Every condition is met today. Count again whenever its tools change, and on ${esc(fmtDate(s.recheck))}.</p>${soft.length ? `<div class="cards">${soft.map((id) => card(id, 'soft')).join('')}</div>` : ''}`
@@ -650,7 +658,7 @@ function render() {
   const d = today();
   const gap = (t) => `<span class="gap">${t}</span>`;
   const reach = picked.length ? `Risk factors present: ${n} of 3. ` + lit.map((k) => `${LAMPS[k][0]}: ${list(by[k])}`).join('. ') + '.' : gap('Not counted yet.');
-  const logs = s.logs === 'ours' ? 'Its activity is logged where we can review it.' : gap('No logs we can review. Confirm what the vendor keeps, for how long, and how we get it.');
+  const logs = (s.logs === 'ours' ? 'Its activity is logged where we can review it.' : gap('No logs we can review. Confirm what the vendor keeps, for how long, and how we get it.')) + ' ' + (s.has('alerts') ? 'Unusual activity raises an alert.' : gap('No alerting on unusual activity.'));
   const rows = [
     ['Agent and scope', `${esc(agent)}, running on ${run.short}. Connected to: ${picked.length ? esc(list(picked.map((c) => c.t))) : gap('nothing listed')}.`],
     ['Business owner', s.owner ? esc(s.owner) : gap('No named owner.')],
