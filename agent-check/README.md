@@ -2,7 +2,7 @@
 
 A one-page tool for whoever sets the rules for other people's AI agents. Open `index.html` in a browser, tick what one agent connects to, and you get:
 
-- **The count:** three lamps (A untrusted input, B sensitive data, C can act or send). Any two can be fine; all three needs a person in the loop or a lamp dimmed.
+- **The count:** three lamps (untrusted input, sensitive data, acts or sends). Any two can be fine; all three needs a person in the loop or a lamp dimmed.
 - **The doors:** where you can still enforce rules (device, agent app, network, identity), given where the agent runs.
 - **"Can I have one?":** yes on these terms, or not this one, not yet, with a reply you can send.
 - **Getting to yes:** the controls that close each missing term. The full list is in [CONTROLS.md](CONTROLS.md).
