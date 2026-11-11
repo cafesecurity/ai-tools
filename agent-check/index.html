@@ -323,7 +323,7 @@ const RUNS = [
 const CTRLS = [
   {id: 'plan', g: 'policy', t: 'It is on a plan the company controls', s: 'Not a personal account: a contract covers our data, and administrators can see it and switch it off.'},
   {id: 'callback', g: 'policy', t: 'Payment-detail changes need out-of-band verification', s: 'Confirmed through a separate channel we already trust, such as a call to a number on file, before any change takes effect.'},
-  {id: 'narrow', g: 'tech', t: 'It has the narrowest access that does the job', s: 'One mailbox, not everything; read-only where that will do.'},
+  {id: 'narrow', g: 'tech', t: 'It has only the access its job needs', s: 'For example, access to one shared mailbox rather than everyone\'s, or permission to read but not edit where reading is enough.'},
   {id: 'list', g: 'tech', t: 'It can connect only to servers on our list', s: 'Enforced by the agent app\'s allowlist or a gateway, and a changed tool description gets reviewed again. A list on paper alone does not count.'},
   {id: 'human', g: 'tech', t: 'A person approves what it sends, pays or changes', s: 'Set in the product or a gateway, and including edits to records, not only "send" and "pay".'},
   {id: 'logs', g: 'tech', rec: 1, t: 'Its activity is logged where we can review it', s: 'What it read, sent and changed, in logs we hold or can export when we need them. Vendor-only logs we cannot get do not count.'},
@@ -659,7 +659,7 @@ function render() {
 
   const miss = [];
   if (!plan) miss.push(['plan', noPlan ? `a plan the company controls (${A.name} has none: ${A.planNote}, as of November 2026)` : 'a plan the company controls']);
-  if (!s.has('narrow')) miss.push(['narrow', 'the narrowest access that does the job']);
+  if (!s.has('narrow')) miss.push(['narrow', 'only the access its job needs']);
   if (anyMcp && !s.has('list')) miss.push(['list', unvetted ? `only servers on our list (not on it: ${list(notListed)})` : 'only servers on our list']);
   if (!s.owner || !s.recheck) miss.push(['owner', !s.owner && !s.recheck ? 'a named owner and a review date' : !s.owner ? 'a named owner' : 'a review date']);
   if (n === 3 && !s.has('human')) miss.push(['human', 'human approval, or one risk factor removed']);
