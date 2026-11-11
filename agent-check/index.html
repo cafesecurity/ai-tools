@@ -63,7 +63,26 @@ button {
 button:hover { border-color: var(--accent); }
 button.primary { background: var(--accent); border-color: var(--accent); color: #1B1403; }
 :focus-visible { outline: 3px solid var(--lamp-a); outline-offset: 2px; }
-.grid { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 28px; align-items: start; }
+.grid { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 28px; align-items: start; }
+.grid.wide { grid-template-columns: 1fr; } .grid.wide .result { display: none; }
+.tabs { display: flex; gap: 6px; overflow-x: auto; margin: 0 0 18px; padding-bottom: 4px; }
+.tabs button { flex: none; display: inline-flex; align-items: center; gap: 8px; border-radius: 10px; padding: 9px 14px 9px 10px; background: var(--panel-2); border: 2px solid var(--line); color: var(--muted); }
+.tabs button .n { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; background: var(--panel); color: var(--ink); font-family: var(--mono); font-size: 13px; }
+.tabs button[aria-selected="true"] { color: var(--ink); border-color: var(--accent); background: var(--panel); }
+.tabs button[aria-selected="true"] .n { background: var(--accent); color: #1B1403; }
+.tabs em { font-style: normal; font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: var(--panel); color: var(--muted); }
+.tabs em:empty { display: none; }
+.tabs em.ok { background: var(--good); color: #10203A; } .tabs em.no { background: var(--bad); color: #10203A; }
+.step[data-tab] { display: none; } .step[data-tab].on { display: block; }
+.paperstep { background: none !important; border: none !important; padding: 0 !important; }
+.stepnav { display: flex; justify-content: space-between; gap: 10px; margin-top: 4px; }
+.stepnav button:disabled { visibility: hidden; }
+.mini { display: block; width: 100%; text-align: left; border-radius: 10px; margin-top: 12px; font-weight: 600; font-size: 15px; }
+.mini .st { color: var(--v, var(--muted)); }
+details.srvbox { margin-top: 18px; border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; background: var(--panel-2); }
+details.srvbox summary { cursor: pointer; font-weight: 700; font-size: 17px; }
+details.srvbox summary span { font-weight: 500; color: var(--muted); font-size: 15px; }
+details.srvbox[open] summary { margin-bottom: 10px; }
 @media (max-width: 880px) { .grid { grid-template-columns: 1fr; } .result { position: static !important; } }
 section.step { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 20px; margin-bottom: 18px; }
 .step h2 { font-size: 22px; margin: 0 0 4px; display: flex; gap: 12px; align-items: baseline; }
@@ -112,10 +131,10 @@ ul.plain { list-style: none; margin: 0; padding: 0; display: flex; flex-directio
 ul.plain li { display: grid; grid-template-columns: 26px 1fr; gap: 6px; }
 .ok { color: var(--good); font-weight: 700; } .no { color: var(--bad); font-weight: 700; } .maybe { color: var(--accent); font-weight: 700; }
 .reply { background: var(--panel); border: 1px dashed var(--line); border-radius: 8px; padding: 12px 14px; font-size: 15px; white-space: pre-wrap; }
-.toyes { margin-top: 36px; }
+.toyes { margin-top: 24px; }
 .toyes > h2 { font-size: 26px; margin: 0 0 4px; }
 .toyes > p { margin: 0 0 16px; color: var(--muted); max-width: 70ch; }
-.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; }
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
 .card { background: var(--panel); border: 1px solid var(--line); border-top: 5px solid var(--bad); border-radius: 12px; padding: 16px 18px; }
 .card.soft { border-top-color: var(--accent); }
 h3.grp { margin: 16px 0 8px; font-size: 15px; display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; }
@@ -173,7 +192,8 @@ footer a { color: var(--lamp-a); }
 @media (prefers-reduced-motion: reduce) { .bulb { transition: none; } }
 @media print {
   body { background: #fff; }
-  header, .bar, .note, .grid, .toyes, .paperhead, footer { display: none !important; }
+  header, .bar, .note, .tabs, .result, .stepnav, .step[data-tab]:not([data-tab="5"]), .paperhead, footer { display: none !important; }
+  .grid { display: block; } .step[data-tab="5"] { display: block !important; }
   .wrap { padding: 0; max-width: none; } .paperwrap { margin: 0; }
   .paper { box-shadow: none; border-radius: 0; padding: 0; background: #fff; }
 }
@@ -184,13 +204,7 @@ footer a { color: var(--lamp-a); }
   <header>
     <a class="videolink" href="https://youtu.be/QffClw8TdN4"><span class="play" aria-hidden="true"></span><span><small>Companion to the video</small>Securing AI Agents at Work</span><span class="go" aria-hidden="true">Watch on YouTube &rarr;</span></a>
     <h1>AI Agent Check: <span>can we say yes to this agent?</span></h1>
-    <p>AI agents read your email, use your apps and act for you. The risk is in the combination: an agent that reads what outsiders write, can reach sensitive data, and can send or change things can be tricked into leaking or acting. Check one agent in three steps:</p>
-    <ol class="how">
-      <li>Pick the agent and where it runs.</li>
-      <li>Tick what it can reach.</li>
-      <li>Tick the controls already in place.</li>
-    </ol>
-    <p>You'll see which of the three risks it has, where you can still enforce rules, an approval decision with any conditions not yet met, and an approval record to keep. Nothing you enter leaves this page.</p>
+    <p>AI agents read your email, use your apps and act for you. The risk is in the combination: an agent that reads what outsiders write, can reach sensitive data, and can send or change things can be tricked into leaking or acting. Work through the tabs to check one agent and get an approval decision and a record to keep. Nothing you enter leaves this page.</p>
   </header>
   <div class="bar">
     <span class="tag" id="mode"></span>
@@ -199,9 +213,17 @@ footer a { color: var(--lamp-a); }
   </div>
   <p class="note" id="note"></p>
 
-  <div class="grid">
+  <nav class="tabs" role="tablist" aria-label="Steps">
+    <button type="button" role="tab" data-go="1" id="tab-1"><span class="n">1</span>Agent</button>
+    <button type="button" role="tab" data-go="2" id="tab-2"><span class="n">2</span>Access <em id="cnt-2"></em></button>
+    <button type="button" role="tab" data-go="3" id="tab-3"><span class="n">3</span>Controls <em id="cnt-3"></em></button>
+    <button type="button" role="tab" data-go="4" id="tab-4"><span class="n">4</span>Decision <em id="cnt-4"></em></button>
+    <button type="button" role="tab" data-go="5" id="tab-5"><span class="n">5</span>Approval record</button>
+  </nav>
+  <div class="grid" id="grid">
+    <div class="panels">
     <form id="form" autocomplete="off">
-      <section class="step">
+      <section class="step" data-tab="1" role="tabpanel">
         <h2><span class="n">1</span>Which agent?</h2>
         <p>One agent at a time. Count per agent, not per tool.</p>
         <div class="agents" id="agents" role="radiogroup" aria-label="Which agent"></div>
@@ -213,15 +235,16 @@ footer a { color: var(--lamp-a); }
           <label class="f" for="recheck">Next review date<input type="date" id="recheck"></label>
         </div>
       </section>
-      <section class="step">
+      <section class="step" data-tab="2" role="tabpanel">
         <h2><span class="n">2</span>What can it reach?</h2>
         <p>Each connection adds one or more of three risk factors: <span class="chip A">Untrusted input</span> <span class="chip B">Sensitive data</span> <span class="chip C">Acts or sends</span></p>
         <div class="opts" id="conns"></div>
-        <h3 class="srvh">Common MCP servers</h3>
+        <details class="srvbox" id="srvbox"><summary>Common MCP servers <span id="srvcount"></span></summary>
         <p class="disclaimer" id="srvnote"><b>Checked against each vendor's own documentation on 11 November 2026.</b> Servers add and change tools often, so check the current docs before you rely on this. The risk factors show what a server can do depending on how it is set up; they are not a security rating or a verdict on the product. This tool tests nothing and does not make any agent safe: securing your systems stays your responsibility.</p>
         <div class="opts" id="servers"></div>
+        </details>
       </section>
-      <section class="step">
+      <section class="step" data-tab="3" role="tabpanel">
         <h2><span class="n">3</span>What controls do we have in place?</h2>
         <p>Be strict. "We meant to" counts as no.</p>
         <h3 class="grp">Policy and process <span>Rules and routines people follow</span></h3>
@@ -238,23 +261,17 @@ footer a { color: var(--lamp-a); }
         </div>
       </section>
     </form>
-
-    <aside class="result" aria-live="polite">
-      <h2>Risk factors</h2>
-      <div class="lamps" id="lamps"></div>
-      <p class="factnote">Any two can be managed. All three together let one planted instruction read sensitive data and send it out. (The video shows these as three lamps.)</p>
-      <div class="verdict" id="risk"></div>
-      <div id="dim"></div>
-      <h3>Where you can still enforce rules</h3>
-      <ul class="plain" id="doors"></ul>
-      <h3>Approval decision</h3>
-      <div class="verdict" id="answer"></div>
-      <div class="reply" id="reply"></div>
-    </aside>
-  </div>
-
-  <section class="toyes" id="toyes" aria-live="polite"></section>
-
+      <section class="step" data-tab="4" role="tabpanel">
+        <h2><span class="n">4</span>Approval decision</h2>
+        <div class="verdict" id="answer"></div>
+        <h3>Reply you can send</h3>
+        <div class="reply" id="reply"></div>
+        <div id="dim"></div>
+        <h3>Where you can still enforce rules</h3>
+        <ul class="plain" id="doors"></ul>
+        <div class="toyes" id="toyes"></div>
+      </section>
+      <section class="step paperstep" data-tab="5" role="tabpanel">
   <div class="paperwrap">
     <div class="paperhead">
       <h2>Agent approval record</h2>
@@ -265,6 +282,18 @@ footer a { color: var(--lamp-a); }
       </div>
     </div>
     <div class="paper" id="paper"></div>
+  </div>
+
+      </section>
+      <div class="stepnav"><button type="button" id="back">&larr; Back</button><button type="button" class="primary" id="next">Next</button></div>
+    </div>
+    <aside class="result" aria-live="polite">
+      <h2>Risk factors</h2>
+      <div class="lamps" id="lamps"></div>
+      <p class="factnote">Any two can be managed. All three together let one planted instruction read sensitive data and send it out. (The video shows these as three lamps.)</p>
+      <div class="verdict" id="risk"></div>
+      <button type="button" class="mini" id="mini" data-go="4"></button>
+    </aside>
   </div>
 
   <footer>
@@ -522,6 +551,7 @@ function load(s, mode) {
   document.querySelectorAll('[data-ctrl]').forEach((el) => { el.checked = s.ctrls.includes(el.dataset.ctrl); });
   const ag = $('a-' + (s.agent || 'custom')); if (ag) ag.checked = true;
   const sv = s.servers || {};
+  $('srvbox').open = Object.keys(sv).length > 0;
   document.querySelectorAll('[data-srv]').forEach((el) => { el.checked = !!sv[el.dataset.srv]; });
   document.querySelectorAll('[data-srvopt]').forEach((el) => { el.checked = !!(sv[el.dataset.srvopt] || []).includes(el.dataset.opt); });
   $('mode').textContent = mode;
@@ -602,6 +632,15 @@ function render() {
     : yes ? `Approved. ${agent} is on a plan we control, has only the access it needs, connects only to servers on our list, and ${s.owner} owns it. Next review: ${fmtDate(s.recheck)}.`
     : `Not approved yet. Before ${agent === 'This agent' ? 'this agent' : agent} can go ahead, we need: ${missing.join('; ')}. Once ${missing.length > 1 ? 'these are' : 'this is'} in place, we can approve it.`;
   $('reply').textContent = reply;
+  const nSrv = Object.keys(s.servers).length;
+  $('cnt-2').textContent = picked.length ? String(picked.length) : '';
+  const appl = CTRLS.filter((c) => !$('k-' + c.id).disabled || c.id === 'plan');
+  $('cnt-3').textContent = picked.length ? `${appl.filter((c) => s.has(c.id)).length}/${appl.length}` : '';
+  $('cnt-4').textContent = !picked.length ? '' : yes ? 'Approved' : 'Not yet';
+  $('cnt-4').className = !picked.length ? '' : yes ? 'ok' : 'no';
+  $('srvcount').textContent = nSrv ? `(${nSrv} selected of ${SERVERS.length})` : `(${SERVERS.length})`;
+  $('mini').style.setProperty('--v', yes ? 'var(--good)' : 'var(--bad)');
+  $('mini').innerHTML = !picked.length ? 'Approval decision: tick what it can reach first' : `Approval decision: <span class="st">${yes ? 'approved' : 'not approved yet'}</span>${yes ? '' : `, ${missing.length} ${missing.length > 1 ? 'conditions' : 'condition'} not met`} →`;
 
   // ---- getting to yes ----
   const fixes = miss.map((m) => m[0]);
@@ -676,6 +715,26 @@ let framed = true; try { framed = window.self !== window.top; } catch (e) {}
 if (!framed) { $('print').hidden = false; $('print').addEventListener('click', () => window.print()); }
 
 loadEx(0);
+
+// ---- tabs ----
+const TABS = {1: 'agent', 2: 'access', 3: 'controls', 4: 'decision', 5: 'record'};
+const NEXT = {1: 'Next: what it can reach', 2: 'Next: controls', 3: 'Next: decision', 4: 'Next: approval record'};
+function go(n, scroll) {
+  n = Math.max(1, Math.min(5, +n || 1));
+  document.querySelectorAll('.step[data-tab]').forEach((el) => el.classList.toggle('on', +el.dataset.tab === n));
+  document.querySelectorAll('.tabs [data-go]').forEach((b) => b.setAttribute('aria-selected', String(+b.dataset.go === n)));
+  $('grid').classList.toggle('wide', n === 5);
+  $('back').disabled = n === 1;
+  $('next').hidden = n === 5; $('next').textContent = (NEXT[n] || '') + ' →'; $('next').dataset.n = n + 1; $('back').dataset.n = n - 1;
+  try { if (location.hash !== '#' + TABS[n]) history.replaceState(null, '', '#' + TABS[n]); } catch (e) {}
+  if (scroll) { const t = document.querySelector('.tabs'); if (t && t.getBoundingClientRect().top < 0) t.scrollIntoView({behavior: 'smooth', block: 'start'}); }
+}
+document.querySelectorAll('[data-go]').forEach((b) => b.addEventListener('click', () => go(b.dataset.go, true)));
+$('next').addEventListener('click', () => go($('next').dataset.n, true));
+$('back').addEventListener('click', () => go($('back').dataset.n, true));
+const fromHash = () => { const h = location.hash.slice(1); const n = +Object.keys(TABS).find((k) => TABS[k] === h); go(n || 1); };
+window.addEventListener('hashchange', fromHash);
+fromHash();
 </script>
 </body>
 </html>
