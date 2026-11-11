@@ -269,7 +269,7 @@ footer a { color: var(--lamp-a); }
 
   <footer>
     <p><b>Use at your own risk.</b> Provided as is, with no warranty. Products, settings and MCP servers change quickly; the server details were checked against vendors' documentation on 11 November 2026 and may be out of date or incomplete. Nothing here is a security assessment, a guarantee or professional advice, and responsibility for securing your systems and data stays with you and your organisation.</p>
-    <p>A thinking aid from the video <a href="https://youtu.be/QffClw8TdN4">Securing AI Agents at Work</a>, current as of November 2026. It is not an assessment of any product, and not legal or compliance advice. The three risk factors follow Meta's <a href="https://ai.meta.com/blog/practical-ai-agent-security/">Agents Rule of Two</a>, which builds on Simon Willison's <a href="https://simonwillison.net/2025/Jun/16/the-lethal-trifecta/">lethal trifecta</a>. The call-back rule for bank details follows the UK National Crime Agency's <a href="https://www.nationalcrimeagency.gov.uk/who-we-are/publications/787-invoice-fraud-infosheet/file">invoice fraud guidance</a>.</p>
+    <p>A thinking aid from the video <a href="https://youtu.be/QffClw8TdN4">Securing AI Agents at Work</a>, current as of November 2026. It is not an assessment of any product, and not legal or compliance advice. The three risk factors follow Meta's <a href="https://ai.meta.com/blog/practical-ai-agent-security/">Agents Rule of Two</a>, which builds on Simon Willison's <a href="https://simonwillison.net/2025/Jun/16/the-lethal-trifecta/">lethal trifecta</a>. Out-of-band verification of payment-detail changes follows the UK National Crime Agency's <a href="https://www.nationalcrimeagency.gov.uk/who-we-are/publications/787-invoice-fraud-infosheet/file">invoice fraud guidance</a>.</p>
   </footer>
 </div>
 
@@ -296,7 +296,7 @@ const RUNS = [
 ];
 const CTRLS = [
   {id: 'plan', g: 'policy', t: 'It is on a plan the company controls', s: 'Not a personal account: a contract covers our data, and administrators can see it and switch it off.'},
-  {id: 'callback', g: 'policy', t: 'Bank-detail changes need a call-back', s: 'A person rings a number we already hold before any change.'},
+  {id: 'callback', g: 'policy', t: 'Payment-detail changes need out-of-band verification', s: 'Confirmed through a separate channel we already trust, such as a call to a number on file, before any change takes effect.'},
   {id: 'narrow', g: 'tech', t: 'It has the narrowest access that does the job', s: 'One mailbox, not everything; read-only where that will do.'},
   {id: 'list', g: 'tech', t: 'It can connect only to servers on our list', s: 'Enforced by the agent app\'s allowlist or a gateway, and a changed tool description gets reviewed again. A list on paper alone does not count.'},
   {id: 'human', g: 'tech', t: 'A person approves what it sends, pays or changes', s: 'Set in the product or a gateway, and including edits to records, not only "send" and "pay".'},
@@ -339,8 +339,8 @@ const CONTROLS = {
     'Make approvals cover edits to records, not only "send" and "pay". Approvals guard verbs.',
     'Prefer boundaries to prompts: a sandbox or an allowed-destinations list means fewer approvals, and each one gets read.',
   ]},
-  callback: {g: 'policy', h: 'Put bank-detail changes behind a call-back', why: 'Changing a record is quieter than making a payment, and just as costly.', c: [
-    'Any change to a supplier\'s bank details needs a person, and a call-back to a number you already hold.',
+  callback: {g: 'policy', h: 'Verify payment-detail changes out of band', why: 'Changing a record is quieter than making a payment, and just as costly.', c: [
+    'Any change to payment details (bank account, payee, remittance address) is confirmed by a person through a separate channel you already trust, such as a call to a number on file. Never use contact details from the request itself.',
     'Give the agent read-only access to supplier records.',
     'Hold the first payment to changed details for a second approver.',
     'Agree in advance who rings the bank if money moves: the first hour matters.',
@@ -536,7 +536,7 @@ function read() {
 }
 
 function render() {
-  // An unvetted server contradicts "only servers on our list"; no payments system, no call-back question.
+  // An unvetted server contradicts "only servers on our list"; no payments system, no payment-detail question.
   const unvetted = $('c-mcp3').checked, pays = $('c-pay').checked;
   $('k-list').disabled = unvetted; if (unvetted) $('k-list').checked = false;
   $('k-callback').disabled = !pays; if (!pays) $('k-callback').checked = false;
@@ -593,7 +593,7 @@ function render() {
   if (!s.has('list')) miss.push(['list', unvetted ? 'only servers on our list (it uses one nobody has vetted)' : 'only servers on our list']);
   if (!s.owner || !s.recheck) miss.push(['owner', !s.owner && !s.recheck ? 'a named owner and a date we look again' : !s.owner ? 'a named owner' : 'a date we look again']);
   if (n === 3 && !s.has('human')) miss.push(['human', 'human approval, or one risk factor removed']);
-  if (pays && !s.has('callback')) miss.push(['callback', 'a call-back before any change of bank details']);
+  if (pays && !s.has('callback')) miss.push(['callback', 'out-of-band verification of payment-detail changes']);
   const missing = miss.map((m) => m[1]);
   const yes = picked.length > 0 && missing.length === 0;
   $('answer').style.setProperty('--v', yes ? 'var(--good)' : 'var(--bad)');
@@ -620,7 +620,7 @@ function render() {
     ['1. What have we got?', `${esc(agent)}, running on ${run.short}. Connected to: ${picked.length ? esc(list(picked.map((c) => c.t))) : gap('nothing listed')}.`],
     ['2. Who owns it?', s.owner ? esc(s.owner) : gap('No named owner.')],
     ['3. What can it reach?', reach + (n === 3 ? (s.has('human') ? ' A person approves what it sends, pays or changes.' : ' ' + gap('No mitigating control.')) : '')],
-    ['4. What happens on a bad day?', 'Steps below.' + (pays ? (s.has('callback') ? ' Bank-detail changes need a call-back.' : ' ' + gap('No call-back rule for bank-detail changes.')) : '')],
+    ['4. What happens on a bad day?', 'Steps below.' + (pays ? (s.has('callback') ? ' Payment-detail changes are verified out of band.' : ' ' + gap('No out-of-band verification of payment-detail changes.')) : '')],
     ['5. How would we know?', logs],
   ];
   const bad = [

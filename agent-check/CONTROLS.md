@@ -55,11 +55,11 @@ Current as of November 2026. A thinking aid, not an assessment of any product, a
 - Make approvals cover edits to records, not only "send" and "pay". Approvals guard verbs.
 - Prefer boundaries to prompts: a sandbox or an allowed-destinations list means fewer approvals, and each one gets read.
 
-## When it can reach payments: put bank-detail changes behind a call-back
+## When it can reach payments: verify payment-detail changes out of band
 
 *Policy and process.* Changing a record is quieter than making a payment, and just as costly.
 
-- Any change to a supplier's bank details needs a person, and a call-back to a number you already hold.
+- Any change to payment details (bank account, payee, remittance address) is confirmed by a person through a separate channel you already trust, such as a call to a number on file. Never use contact details from the request itself.
 - Give the agent read-only access to supplier records.
 - Hold the first payment to changed details for a second approver.
 - Agree in advance who rings the bank if money moves: the first hour matters.
