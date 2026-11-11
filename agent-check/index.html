@@ -235,7 +235,7 @@ footer a { color: var(--lamp-a); }
           <label class="f" for="name">Agent<input type="text" id="name" placeholder="e.g. Finance team's assistant"></label>
           <label class="f" for="owner">Named owner (a person)<input type="text" id="owner" placeholder="Nobody yet"></label>
           <label class="f" for="run">Where it runs<select id="run"></select></label>
-          <label class="f" for="recheck">Next review date<input type="date" id="recheck"></label>
+          <label class="f" for="recheck"><span>Next review date <small style="font-weight:400">(3 months by default)</small></span><input type="date" id="recheck"></label>
         </div>
       </section>
       <section class="step" data-tab="2" role="tabpanel">
@@ -505,10 +505,10 @@ const EXAMPLES = [
   {title: 'OpenClaw on a home server, work inbox connected', agent: 'openclaw', name: 'OpenClaw (home server)', owner: '', run: 'self', recheck: '',
     conns: ['inbox', 'cal', 'send', 'web', 'exec'], ctrls: [],
     note: 'Assumes: someone runs it on their own machine at home and has signed it in to their work email and calendar. Identity is the only place left to enforce rules.'},
-  {title: 'Grok Bot on a business plan, research only', agent: 'grok', name: 'Grok Bot (research)', owner: 'Research lead', run: 'cloud', recheck: '+90',
+  {title: 'Grok Bot on a business plan, research only', agent: 'grok', name: 'Grok Bot (research)', owner: 'Research lead', run: 'cloud', recheck: '',
     conns: ['web', 'exec'], ctrls: ['plan', 'narrow', 'logs'],
     note: 'Assumes: an Enterprise plan with audit logs exported to us, used to read the public web and draft reports, with no company data and no MCP servers connected. No sensitive data in reach, so the risk is moderate and every condition is met; alerting is still recommended.'},
-  {title: 'dots in a company workspace, sales team', agent: 'dots', name: 'dots (sales team)', owner: 'Head of Sales Ops', run: 'cloud', recheck: '+90',
+  {title: 'dots in a company workspace, sales team', agent: 'dots', name: 'dots (sales team)', owner: 'Head of Sales Ops', run: 'cloud', recheck: '',
     conns: ['inbox', 'cal', 'send'], servers: {salesforce: ['read', 'web', 'write']}, srvok: {salesforce: true}, ctrls: ['plan', 'list', 'human', 'logs'],
     note: 'Assumes: switched on in a company workspace with mail and calendar, plus the Salesforce server (on our approved list) with write access, and a person approving what it sends. Access is broader than the job needs, so not yet.'},
   {title: 'Claude Duet on an executive\'s personal plan', agent: 'duet', name: 'Claude Duet (executive)', owner: 'The executive', run: 'cloud', recheck: '',
@@ -517,7 +517,7 @@ const EXAMPLES = [
   {title: 'Muse on a personal account, marketing', agent: 'muse', name: 'Muse (marketing)', owner: 'Marketing manager', run: 'cloud', recheck: '',
     conns: ['web', 'send'], ctrls: ['narrow'],
     note: 'Assumes: a personal account used to research the public web and send messages, with no company data connected. Only two risk factors, so the risk is moderate; it is the approval conditions that fail.'},
-  {title: 'Hermes Agent on a server we run, behind our gateway', agent: 'hermes', name: 'Hermes Agent (internal)', owner: 'Platform team lead', run: 'server', recheck: '+90',
+  {title: 'Hermes Agent on a server we run, behind our gateway', agent: 'hermes', name: 'Hermes Agent (internal)', owner: 'Platform team lead', run: 'server', recheck: '',
     conns: ['files', 'exec'], servers: {github: ['private']}, srvok: {github: true}, ctrls: ['plan', 'narrow', 'list', 'human', 'logs', 'alerts'],
     note: 'Assumes: self-hosted on our own server, reading internal files and the GitHub server in read-only mode on private repositories (on our approved list), with no inbox or web access. No untrusted input, every condition met, logging and alerting on.'},
 ];
@@ -561,9 +561,10 @@ const ctrlHtml = (c) => `<label class="o" for="k-${c.id}"><input type="checkbox"
 $('ctrls-policy').innerHTML = CTRLS.filter((c) => c.g === 'policy').map(ctrlHtml).join('');
 $('ctrls-tech').innerHTML = CTRLS.filter((c) => c.g === 'tech').map(ctrlHtml).join('');
 
+const plusMonths = (n) => { const d = new Date(); d.setMonth(d.getMonth() + n); return d.toISOString().slice(0, 10); };
 const plusDays = (n) => { const d = new Date(Date.now() + n * 864e5); return d.toISOString().slice(0, 10); };
 function load(s, mode) {
-  $('name').value = s.name; $('owner').value = s.owner; $('run').value = s.run; $('recheck').value = s.recheck && s.recheck[0] === '+' ? plusDays(+s.recheck) : s.recheck;
+  $('name').value = s.name; $('owner').value = s.owner; $('run').value = s.run; $('recheck').value = s.recheck && s.recheck[0] === '+' ? plusDays(+s.recheck) : (s.recheck || plusMonths(3));
   $('note').textContent = s.note ? s.note + ' A made-up setup to show the risk assessment, not a statement of how the product works by default.' : '';
   document.querySelectorAll('[data-conn]').forEach((el) => { el.checked = s.conns.includes(el.dataset.conn); });
   document.querySelectorAll('[data-ctrl]').forEach((el) => { el.checked = s.ctrls.includes(el.dataset.ctrl) || (el.dataset.ctrl === 'logs' && s.logs === 'ours'); });
