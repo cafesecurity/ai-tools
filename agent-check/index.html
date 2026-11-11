@@ -37,6 +37,13 @@ body {
   color: var(--ink); font-family: var(--font); font-size: 17px; line-height: 1.5;
 }
 .wrap { max-width: 1180px; margin: 0 auto; padding: 28px 20px 64px; }
+.videolink { display: inline-flex; align-items: center; gap: 14px; margin: 0 0 18px; padding: 10px 18px 10px 12px; background: var(--panel); border: 2px solid var(--line); border-radius: 14px; color: var(--ink); text-decoration: none; max-width: 100%; flex-wrap: wrap; }
+.videolink:hover { border-color: var(--accent); }
+.videolink .play { width: 44px; height: 44px; border-radius: 50%; background: var(--bad); position: relative; flex: none; }
+.videolink .play::after { content: ""; position: absolute; left: 17px; top: 13px; border-left: 15px solid #fff; border-top: 9px solid transparent; border-bottom: 9px solid transparent; }
+.videolink small { display: block; font-size: 13px; color: var(--muted); font-weight: 500; letter-spacing: .04em; text-transform: uppercase; }
+.videolink > span:nth-child(2) { font-size: 19px; font-weight: 700; line-height: 1.25; }
+.videolink .go { font-size: 15px; font-weight: 600; color: var(--accent); }
 header h1 { font-size: 38px; line-height: 1.1; margin: 0 0 8px; text-wrap: balance; }
 header h1 span { color: var(--accent); }
 header p { margin: 0; max-width: 62ch; color: var(--muted); }
@@ -155,6 +162,7 @@ footer a { color: var(--lamp-a); }
 <body>
 <div class="wrap">
   <header>
+    <a class="videolink" href="https://youtu.be/QffClw8TdN4"><span class="play" aria-hidden="true"></span><span><small>Companion to the video</small>Securing AI Agents at Work</span><span class="go" aria-hidden="true">Watch on YouTube &rarr;</span></a>
     <h1>AI Agent Check: <span>is this one all right?</span></h1>
     <p>Tick what one AI agent connects to. You get the three-lamp count, the doors where you can still enforce rules, an answer to "can I have one?", and a one-page brief to keep. Nothing you type leaves this page.</p>
   </header>
@@ -228,7 +236,7 @@ footer a { color: var(--lamp-a); }
 
   <footer>
     <p><b>Use at your own risk.</b> Provided as is, with no warranty. Products, settings and MCP servers change quickly; the server details were checked against vendors' documentation on 11 November 2026 and may be out of date or incomplete. Nothing here is a security assessment, a guarantee or professional advice, and responsibility for securing your systems and data stays with you and your organisation.</p>
-    <p>A thinking aid from the video <a href="https://youtu.be/QffClw8TdN4">The Assistant Nobody in IT Has Met</a>, current as of November 2026. It is not an assessment of any product, and not legal or compliance advice. The count follows Meta's <a href="https://ai.meta.com/blog/practical-ai-agent-security/">Agents Rule of Two</a>, which builds on Simon Willison's <a href="https://simonwillison.net/2025/Jun/16/the-lethal-trifecta/">lethal trifecta</a>. The call-back rule for bank details follows the UK National Crime Agency's <a href="https://www.nationalcrimeagency.gov.uk/who-we-are/publications/787-invoice-fraud-infosheet/file">invoice fraud guidance</a>.</p>
+    <p>A thinking aid from the video <a href="https://youtu.be/QffClw8TdN4">Securing AI Agents at Work</a>, current as of November 2026. It is not an assessment of any product, and not legal or compliance advice. The count follows Meta's <a href="https://ai.meta.com/blog/practical-ai-agent-security/">Agents Rule of Two</a>, which builds on Simon Willison's <a href="https://simonwillison.net/2025/Jun/16/the-lethal-trifecta/">lethal trifecta</a>. The call-back rule for bank details follows the UK National Crime Agency's <a href="https://www.nationalcrimeagency.gov.uk/who-we-are/publications/787-invoice-fraud-infosheet/file">invoice fraud guidance</a>.</p>
   </footer>
 </div>
 
