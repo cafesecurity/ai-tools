@@ -12,7 +12,7 @@ A one-page tool for whoever sets the rules for other people's AI agents. Open `i
 
 It is a single self-contained file. Nothing you type leaves the page: there is no server, no analytics and no storage.
 
-Eleven made-up example setups are built in, a risky and a safer configuration for finance, development, sales and operations, marketing and executive use (plus the always-on assistant from the video). They show how the risk and the decision change with the configuration; none describes how a product works by default.
+Eleven made-up example setups are built in: a risky and a safer configuration for each of finance, development, sales and operations, marketing and executive use, plus a second risky sales and operations case. The risky finance case is the always-on assistant from the video. They show how the risk and the decision change with the configuration; none describes how a product works by default.
 
 From the video ["Securing AI Agents at Work"](https://youtu.be/QffClw8TdN4). Current as of November 2026. A thinking aid, not an assessment of any product, and not legal or compliance advice.
 
