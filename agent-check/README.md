@@ -1,6 +1,8 @@
 # AI Agent Check
 
-A one-page tool for whoever sets the rules for other people's AI agents. Open `index.html` in a browser, tick what one agent connects to, and you get:
+**Use it now: https://cafesecurity.github.io/ai-tools/agent-check/**
+
+A one-page tool for whoever sets the rules for other people's AI agents. Use the live page above, or open `index.html` in a browser; tick what one agent connects to, and you get:
 
 - **Risk factors:** untrusted input, sensitive data, and the ability to act or send data out (the video shows them as three lamps). Any two can be managed; all three need human approval or one factor removed.
 - **Which agent:** pick Grok Bot, dots, Claude Duet, Muse, OpenClaw, Hermes Agent or a custom agent. Each shows key facts as of November 2026, whether a company-controlled plan exists, the settings that help, and a link to current docs. Where no company plan exists, the approval decision says so.
