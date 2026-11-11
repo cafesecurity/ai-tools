@@ -117,6 +117,10 @@ ul.plain li { display: grid; grid-template-columns: 26px 1fr; gap: 6px; }
 .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; }
 .card { background: var(--panel); border: 1px solid var(--line); border-top: 5px solid var(--bad); border-radius: 12px; padding: 16px 18px; }
 .card.soft { border-top-color: var(--accent); }
+h3.grp { margin: 16px 0 8px; font-size: 15px; display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; }
+h3.grp span { text-transform: none; letter-spacing: 0; font-weight: 400; color: var(--muted); font-size: 14px; }
+.grpnote { margin: 8px 0 0; font-size: 14px; color: var(--muted); }
+.card .kind { display: inline-block; font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
 .card h3 { margin: 0 0 2px; font-size: 18px; letter-spacing: 0; text-transform: none; color: var(--ink); }
 .card .why { margin: 0 0 10px; font-size: 14px; color: var(--muted); }
 .card ul { margin: 0; padding-left: 20px; font-size: 15px; display: flex; flex-direction: column; gap: 6px; }
@@ -219,7 +223,11 @@ footer a { color: var(--lamp-a); }
       <section class="step">
         <h2><span class="n">3</span>What controls do we have in place?</h2>
         <p>Be strict. "We meant to" counts as no.</p>
-        <div class="opts" id="ctrls"></div>
+        <h3 class="grp">Policy and process <span>Rules and routines people follow</span></h3>
+        <div class="opts" id="ctrls-policy"></div>
+        <p class="grpnote">The named owner and review date are set in step 1.</p>
+        <h3 class="grp">Technical <span>Settings and tools that enforce it, whatever people remember</span></h3>
+        <div class="opts" id="ctrls-tech"></div>
         <div class="fields" style="margin-top:12px">
           <label class="f" for="logs">Audit log location<select id="logs">
             <option value="ours">Logs we hold</option>
@@ -285,22 +293,22 @@ const RUNS = [
   {id: 'self', t: 'Self-hosted on a personal machine or server', short: 'a self-hosted machine we do not manage', device: 0, network: 0},
 ];
 const CTRLS = [
-  {id: 'plan', t: 'It is on a plan the company controls', s: 'Not a personal account: a contract covers our data, and administrators can see it and switch it off.'},
-  {id: 'narrow', t: 'It has the narrowest access that does the job', s: 'One mailbox, not everything; read-only where that will do.'},
-  {id: 'list', t: 'It connects only to servers on our list', s: 'And a changed tool description gets reviewed again.'},
-  {id: 'human', t: 'A person approves what it sends, pays or changes', s: 'Including edits to records, not only "send" and "pay".'},
-  {id: 'callback', t: 'Bank-detail changes need a call-back', s: 'A person rings a number we already hold before any change.'},
+  {id: 'plan', g: 'policy', t: 'It is on a plan the company controls', s: 'Not a personal account: a contract covers our data, and administrators can see it and switch it off.'},
+  {id: 'callback', g: 'policy', t: 'Bank-detail changes need a call-back', s: 'A person rings a number we already hold before any change.'},
+  {id: 'narrow', g: 'tech', t: 'It has the narrowest access that does the job', s: 'One mailbox, not everything; read-only where that will do.'},
+  {id: 'list', g: 'tech', t: 'It can connect only to servers on our list', s: 'Enforced by the agent app\'s allowlist or a gateway, and a changed tool description gets reviewed again. A list on paper alone does not count.'},
+  {id: 'human', g: 'tech', t: 'A person approves what it sends, pays or changes', s: 'Set in the product or a gateway, and including edits to records, not only "send" and "pay".'},
 ];
 // The controls behind each term: what to do to turn "not yet" into "yes".
 const CONTROLS = {
-  plan: {h: 'Put it on a plan the company controls', why: 'A personal account has no contract covering your data and no administrator.', c: [
+  plan: {g: 'policy', h: 'Put it on a plan the company controls', why: 'A personal account has no contract covering your data and no administrator.', c: [
     'Ask the vendor whether a business or enterprise plan exists for this assistant. Where none does yet, the answer stays "not this one, not yet".',
     'Check the contract covers your data: where it is kept, who can see it, and whether it trains models.',
     'Confirm administrators can see the agent, limit what it connects to, and switch it off.',
     'Until then, stop it being granted access: restrict which third-party apps staff can connect to company accounts in your Google or Microsoft admin console.',
     'Or bring the job home: run an equivalent agent on a computer you manage.',
   ]},
-  narrow: {h: 'Cut its access to what the job needs', why: 'The less it can reach, the less a planted instruction can take.', c: [
+  narrow: {g: 'tech', h: 'Cut its access to what the job needs', why: 'The less it can reach, the less a planted instruction can take.', c: [
     'Write down the job in one sentence, then remove every connection that sentence does not need.',
     'Scope each connection: one mailbox, folder or project, not everything the person can open.',
     'Use read-only access wherever reading is enough.',
@@ -308,7 +316,7 @@ const CONTROLS = {
     'Keep payments and other money-moving systems out unless moving money is the job.',
     'Remove connections it has not used when you next review it.',
   ]},
-  list: {h: 'Connect it only to servers on your list', why: 'Every tool is something the agent reads and a way for data to leave.', c: [
+  list: {g: 'tech', h: 'Connect it only to servers on your list', why: 'Every tool is something the agent reads and a way for data to leave.', c: [
     'Keep a short approved list of MCP servers and connectors, each with an owner.',
     'Enforce the list where you can: the agent app\'s admin allowlist, or a gateway all tool traffic passes through.',
     'For an unvetted server: remove it, or vet it. Who runs it, what does it read, where does the data go, who can change it?',
@@ -316,26 +324,26 @@ const CONTROLS = {
     'Scan agent configurations for risky tool combinations once you have more than a handful.',
     'Check your suppliers\' admin consoles for MCP servers they now run on your data, and their defaults.',
   ]},
-  owner: {h: 'Give it an owner and a date', why: 'An approval is a photograph. Someone has to look again.', c: [
+  owner: {g: 'policy', h: 'Give it an owner and a date', why: 'An approval is a photograph. Someone has to look again.', c: [
     'Name a person, not a department.',
     'Set the date you look again: a quarter at most, and whenever its tools change.',
     'On that date, repeat this count and update "last checked".',
     'Add agents to the mover and leaver checklist: revoke what the agent was granted, hand it over or shut it down, and check what the shutdown leaves behind.',
   ]},
-  human: {h: 'Dim a lamp, or put a person in the loop', why: 'With all three lit, one planted instruction can read sensitive data and send it out.', c: [
+  human: {g: 'tech', h: 'Dim a lamp, or put a person in the loop', why: 'With all three lit, one planted instruction can read sensitive data and send it out.', c: [
     'Dim untrusted input: keep unvetted tools and outside content out of the session that holds sensitive data.',
     'Dim sensitive data: narrow what it can see until what is left would not hurt to lose.',
     'Dim acts or sends: sending to new recipients, paying, and changing records each need a person.',
     'Make approvals cover edits to records, not only "send" and "pay". Approvals guard verbs.',
     'Prefer boundaries to prompts: a sandbox or an allowed-destinations list means fewer approvals, and each one gets read.',
   ]},
-  callback: {h: 'Put bank-detail changes behind a call-back', why: 'Changing a record is quieter than making a payment, and just as costly.', c: [
+  callback: {g: 'policy', h: 'Put bank-detail changes behind a call-back', why: 'Changing a record is quieter than making a payment, and just as costly.', c: [
     'Any change to a supplier\'s bank details needs a person, and a call-back to a number you already hold.',
     'Give the agent read-only access to supplier records.',
     'Hold the first payment to changed details for a second approver.',
     'Agree in advance who rings the bank if money moves: the first hour matters.',
   ]},
-  logs: {h: 'Get the audit log into your hands', why: 'Not a term for "yes", but without it a bad day cannot be reconstructed.', c: [
+  logs: {g: 'tech', h: 'Get the audit log into your hands', why: 'Not a term for "yes", but without it a bad day cannot be reconstructed.', c: [
     'Ask the vendor what it records, for how long, and how you get it.',
     'Where an export exists, send it to your own log store.',
     'Keep your own logs at the systems the agent touches: your search tool, mail, and payments.',
@@ -500,7 +508,9 @@ $('servers').innerHTML = SERVERS.map((v) => {
       <div class="srvmeta"><a href="${v.docs}">Current docs</a></div>
     </div></div>`;
 }).join('');
-$('ctrls').innerHTML = CTRLS.map((c) => `<label class="o" for="k-${c.id}"><input type="checkbox" id="k-${c.id}" data-ctrl="${c.id}"><span><b>${esc(c.t)}</b><small>${esc(c.s)}</small></span><span></span></label>`).join('');
+const ctrlHtml = (c) => `<label class="o" for="k-${c.id}"><input type="checkbox" id="k-${c.id}" data-ctrl="${c.id}"><span><b>${esc(c.t)}</b><small>${esc(c.s)}</small></span><span></span></label>`;
+$('ctrls-policy').innerHTML = CTRLS.filter((c) => c.g === 'policy').map(ctrlHtml).join('');
+$('ctrls-tech').innerHTML = CTRLS.filter((c) => c.g === 'tech').map(ctrlHtml).join('');
 
 const plusDays = (n) => { const d = new Date(Date.now() + n * 864e5); return d.toISOString().slice(0, 10); };
 function load(s, mode) {
@@ -594,7 +604,7 @@ function render() {
   // ---- getting to yes ----
   const fixes = miss.map((m) => m[0]);
   const soft = picked.length && s.logs !== 'ours' ? ['logs'] : [];
-  const card = (id, cls) => `<div class="card ${cls}"><h3>${CONTROLS[id].h}</h3><p class="why">${CONTROLS[id].why}</p><ul>${CONTROLS[id].c.map((c) => `<li>${esc(c)}</li>`).join('')}</ul></div>`;
+  const card = (id, cls) => `<div class="card ${cls}"><span class="kind">${CONTROLS[id].g === 'policy' ? 'Policy and process' : 'Technical'}</span><h3>${CONTROLS[id].h}</h3><p class="why">${CONTROLS[id].why}</p><ul>${CONTROLS[id].c.map((c) => `<li>${esc(c)}</li>`).join('')}</ul></div>`;
   $('toyes').innerHTML = !picked.length ? '' : yes
     ? `<h2>Keeping it a yes</h2><p>Every term is in place today. Count again whenever its tools change, and on ${esc(fmtDate(s.recheck))}.</p>${soft.length ? `<div class="cards">${soft.map((id) => card(id, 'soft')).join('')}</div>` : ''}`
     : `<h2>Getting to yes</h2><p>${fixes.length} ${fixes.length > 1 ? 'terms are' : 'term is'} missing. These are the controls that close each one. Tick the term in step 3 once it is true.</p><div class="cards">${fixes.map((id) => card(id, '')).join('')}${soft.map((id) => card(id, 'soft')).join('')}</div>`;
