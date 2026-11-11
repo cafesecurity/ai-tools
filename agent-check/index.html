@@ -496,30 +496,44 @@ const AGENTS = [
 
 // Made-up setups. Each shows how the count changes with the configuration; none describes a product's defaults.
 const EXAMPLES = [
-  {title: "Imogen's assistant (from the video)", agent: 'custom', name: "Imogen's assistant", owner: '', run: 'cloud', recheck: '',
+  // Finance
+  {group: 'Finance', title: "Risky: Imogen's assistant (from the video)", agent: 'custom', name: "Imogen's assistant", owner: '', run: 'cloud', recheck: '',
     conns: ['inbox', 'cal', 'files', 'pay', 'mcp3'], ctrls: [],
     note: 'The made-up week from the video: an always-on assistant on a personal plan, signed in as a finance manager to her inbox, calendar, company search and the payments system, plus a currency converter she found online (counted as another server nobody has vetted). No controls in place.'},
-  {title: 'OpenClaw on a developer\'s work laptop', agent: 'openclaw', name: 'OpenClaw (developer laptop)', owner: '', run: 'laptop', recheck: '',
+  {group: 'Finance', title: 'Safer: payment-run checks on a company plan', agent: 'grok', name: 'Grok Bot (payment-run checks)', owner: 'Finance systems lead', run: 'cloud', recheck: '',
+    conns: ['files', 'pay'], ctrls: ['plan', 'narrow', 'human', 'callback', 'logs', 'alerts'],
+    note: 'Assumes: an Enterprise plan, checking the payment run against invoices already in the finance system. No inbox, no web, no outside tools, so nothing outsiders write reaches it. A person approves every payment, and payment-detail changes are verified out of band.'},
+  // Development
+  {group: 'Development', title: 'Risky: OpenClaw on a developer\'s work laptop', agent: 'openclaw', name: 'OpenClaw (developer laptop)', owner: '', run: 'laptop', recheck: '',
     conns: ['web', 'exec', 'mcp3'], servers: {github: ['public', 'private', 'write']}, srvok: {github: false}, ctrls: [],
     note: 'Assumes: a developer installed it themselves on a managed laptop, connected the GitHub server with write tools and a token that reaches private repositories, and added a community skill nobody reviewed. The combination from the GitHub incident.'},
-  {title: 'OpenClaw on a home server, work inbox connected', agent: 'openclaw', name: 'OpenClaw (home server)', owner: '', run: 'self', recheck: '',
-    conns: ['inbox', 'cal', 'send', 'web', 'exec'], ctrls: [],
-    note: 'Assumes: someone runs it on their own machine at home and has signed it in to their work email and calendar. Identity is the only place left to enforce rules.'},
-  {title: 'Grok Bot on a business plan, research only', agent: 'grok', name: 'Grok Bot (research)', owner: 'Research lead', run: 'cloud', recheck: '',
-    conns: ['web', 'exec'], ctrls: ['plan', 'narrow', 'logs'],
-    note: 'Assumes: an Enterprise plan with audit logs exported to us, used to read the public web and draft reports, with no company data and no MCP servers connected. No sensitive data in reach, so the risk is moderate and every condition is met; alerting is still recommended.'},
-  {title: 'dots in a company workspace, sales team', agent: 'dots', name: 'dots (sales team)', owner: 'Head of Sales Ops', run: 'cloud', recheck: '',
-    conns: ['inbox', 'cal', 'send'], servers: {salesforce: ['read', 'web', 'write']}, srvok: {salesforce: true}, ctrls: ['plan', 'list', 'human', 'logs'],
-    note: 'Assumes: switched on in a company workspace with mail and calendar, plus the Salesforce server (on our approved list) with write access, and a person approving what it sends. Access is broader than the job needs, so not yet.'},
-  {title: 'Claude Duet on an executive\'s personal plan', agent: 'duet', name: 'Claude Duet (executive)', owner: 'The executive', run: 'cloud', recheck: '',
-    conns: ['inbox', 'cal', 'files', 'send'], ctrls: ['human'],
-    note: 'Assumes: a personal subscription signed in to work mail, calendar and files, relying on the product asking before it sends. No company plan exists for it yet, so it cannot be approved.'},
-  {title: 'Muse on a personal account, marketing', agent: 'muse', name: 'Muse (marketing)', owner: 'Marketing manager', run: 'cloud', recheck: '',
-    conns: ['web', 'send'], ctrls: ['narrow'],
-    note: 'Assumes: a personal account used to research the public web and send messages, with no company data connected. Only two risk factors, so the risk is moderate; it is the approval conditions that fail.'},
-  {title: 'Hermes Agent on a server we run, behind our gateway', agent: 'hermes', name: 'Hermes Agent (internal)', owner: 'Platform team lead', run: 'server', recheck: '',
+  {group: 'Development', title: 'Safer: Hermes Agent on a server we run', agent: 'hermes', name: 'Hermes Agent (internal)', owner: 'Platform team lead', run: 'server', recheck: '',
     conns: ['files', 'exec'], servers: {github: ['private']}, srvok: {github: true}, ctrls: ['plan', 'narrow', 'list', 'human', 'logs', 'alerts'],
     note: 'Assumes: self-hosted on our own server, reading internal files and the GitHub server in read-only mode on private repositories (on our approved list), with no inbox or web access. No untrusted input, every condition met, logging and alerting on.'},
+  // Sales and operations
+  {group: 'Sales and operations', title: 'Risky: dots with full sales access', agent: 'dots', name: 'dots (sales team)', owner: 'Head of Sales Ops', run: 'cloud', recheck: '',
+    conns: ['inbox', 'cal', 'send'], servers: {salesforce: ['read', 'web', 'write'], slack: ['read', 'shared', 'send']}, srvok: {salesforce: true, slack: false}, ctrls: ['plan'],
+    note: 'Assumes: switched on in a company workspace with mail, calendar and sending, the Salesforce server with write access, and a Slack server nobody approved that reads channels shared with other companies. No approvals, logging or alerting.'},
+  {group: 'Sales and operations', title: 'Safer: dots preparing account briefs', agent: 'dots', name: 'dots (account briefs)', owner: 'Head of Sales Ops', run: 'cloud', recheck: '',
+    conns: ['cal'], servers: {salesforce: ['read', 'web']}, srvok: {salesforce: true}, ctrls: ['plan', 'narrow', 'list', 'logs', 'alerts'],
+    note: 'Assumes: a company workspace, reading the calendar and Salesforce through the reads-only server (on our approved list) to prepare meeting briefs. It cannot send, update records or reach anything else.'},
+  {group: 'Sales and operations', title: 'Risky: OpenClaw on a home server, work inbox connected', agent: 'openclaw', name: 'OpenClaw (home server)', owner: '', run: 'self', recheck: '',
+    conns: ['inbox', 'cal', 'send', 'web', 'exec'], ctrls: [],
+    note: 'Assumes: someone runs it on their own machine at home and has signed it in to their work email and calendar. Identity is the only place left to enforce rules.'},
+  // Marketing
+  {group: 'Marketing', title: 'Risky: Muse on a personal account', agent: 'muse', name: 'Muse (marketing)', owner: 'Marketing manager', run: 'cloud', recheck: '',
+    conns: ['web', 'send'], servers: {drive: ['read', 'outside', 'write']}, srvok: {drive: false}, ctrls: [],
+    note: 'Assumes: a personal account researching the web and sending messages, with the company Google Drive connected (including files shared in by agencies). No company plan exists for it, and nothing else is in place.'},
+  {group: 'Marketing', title: 'Safer: Grok Bot on Enterprise for market research', agent: 'grok', name: 'Grok Bot (market research)', owner: 'Head of Marketing', run: 'cloud', recheck: '',
+    conns: ['web', 'exec'], ctrls: ['plan', 'narrow', 'logs', 'alerts'],
+    note: 'Assumes: an Enterprise plan with audit logs exported to us, reading the public web and drafting reports on its own computer, with no company data and no MCP servers connected.'},
+  // Executive
+  {group: 'Executive', title: 'Risky: Claude Duet on an executive\'s personal plan', agent: 'duet', name: 'Claude Duet (executive)', owner: 'The executive', run: 'cloud', recheck: '',
+    conns: ['inbox', 'cal', 'files', 'send'], ctrls: ['human'],
+    note: 'Assumes: a personal subscription signed in to work mail, calendar and files, relying on the product asking before it sends. No company plan exists for it yet, so it cannot be approved.'},
+  {group: 'Executive', title: 'Safer: dots drafting for an executive', agent: 'dots', name: 'dots (executive drafts)', owner: 'Chief of staff', run: 'cloud', recheck: '',
+    conns: ['inbox', 'cal', 'files'], ctrls: ['plan', 'narrow', 'logs', 'alerts'],
+    note: 'Assumes: a company workspace, reading the executive\'s mail, calendar and files to draft replies and briefings that a person sends. It has no way to send or change anything itself.'},
 ];
 const BLANK = {agent: 'custom', name: '', owner: '', run: 'laptop', recheck: '', conns: [], ctrls: []};
 
@@ -727,7 +741,7 @@ $('form').addEventListener('input', (e) => {
   const id = e.target.dataset && e.target.dataset.srv;
   if (id && e.target.checked) SERVERS.find((v) => v.id === id).opts.forEach((o) => { $(`so-${id}-${o.id}`).checked = !!o.def; }); $('mode').textContent = 'Your agent'; $('note').textContent = ''; $('examples').value = ''; render(); });
 $('form').addEventListener('submit', (e) => e.preventDefault());
-$('examples').innerHTML = '<option value="">Choose…</option>' + EXAMPLES.map((e, i) => `<option value="${i}">${esc(e.title)}</option>`).join('');
+$('examples').innerHTML = '<option value="">Choose…</option>' + [...new Set(EXAMPLES.map((e) => e.group))].map((g) => `<optgroup label="${esc(g)}">${EXAMPLES.map((e, i) => e.group === g ? `<option value="${i}">${esc(e.title)}</option>` : '').join('')}</optgroup>`).join('');
 const loadEx = (i) => { load(EXAMPLES[i], 'Example'); $('examples').value = String(i); };
 $('blank').addEventListener('click', () => { load(BLANK, 'Your agent'); $('examples').value = ''; });
 $('examples').addEventListener('change', (e) => { if (e.target.value !== '') loadEx(+e.target.value); });
