@@ -113,6 +113,18 @@ ul.plain li { display: grid; grid-template-columns: 26px 1fr; gap: 6px; }
 .paper ul.fix { margin: 0 0 8px; padding-left: 20px; font-size: 14px; }
 .paper .fixh { font-weight: 700; font-size: 15px; margin: 8px 0 2px; }
 .paperwrap { margin-top: 36px; }
+.srvh { margin: 22px 0 6px; }
+.disclaimer { margin: 0 0 12px; font-size: 14px; color: var(--muted); border-left: 4px solid var(--accent); padding: 4px 0 4px 12px; }
+.disclaimer b { color: var(--ink); font-weight: 600; }
+.srv { display: flex; flex-direction: column; gap: 0; }
+.srv .srvbody { display: none; margin: -2px 0 0 0; border: 2px solid var(--accent); border-top: none; border-radius: 0 0 10px 10px; background: var(--panel-2); padding: 4px 12px 12px 44px; }
+.srv:has(> label input:checked) > label { border-radius: 10px 10px 0 0; border-bottom-color: transparent; }
+.srv:has(> label input:checked) .srvbody { display: flex; flex-direction: column; gap: 8px; }
+.srvopt { display: grid; grid-template-columns: 20px 1fr auto; gap: 10px; align-items: start; font-size: 15px; cursor: pointer; }
+.srvopt input { width: 18px; height: 18px; margin: 2px 0 0; accent-color: var(--accent); }
+.srvmeta { font-size: 14px; color: var(--muted); }
+.srvmeta b { color: var(--ink); font-weight: 600; }
+.srvmeta a { color: var(--lamp-a); }
 .paperhead { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; margin-bottom: 12px; }
 .paperhead h2 { margin: 0; font-size: 26px; }
 #copied { color: var(--good); font-size: 15px; min-width: 6em; }
@@ -169,6 +181,9 @@ footer a { color: var(--lamp-a); }
         <h2><span class="n">2</span>What can it reach?</h2>
         <p>Each connection lights one or more of three lamps: <span class="chip A">Untrusted input</span> <span class="chip B">Sensitive data</span> <span class="chip C">Acts or sends</span></p>
         <div class="opts" id="conns"></div>
+        <h3 class="srvh">Common MCP servers</h3>
+        <p class="disclaimer" id="srvnote"><b>Checked against each vendor's own documentation on 11 November 2026.</b> Servers add and change tools often, so check the current docs before you rely on this. The lamps show what a server can do depending on how it is set up; they are not a security rating or a verdict on the product. This tool tests nothing and does not make any agent safe: securing your systems stays your responsibility.</p>
+        <div class="opts" id="servers"></div>
       </section>
       <section class="step">
         <h2><span class="n">3</span>What's in place?</h2>
@@ -212,6 +227,7 @@ footer a { color: var(--lamp-a); }
   </div>
 
   <footer>
+    <p><b>Use at your own risk.</b> Provided as is, with no warranty. Products, settings and MCP servers change quickly; the server details were checked against vendors' documentation on 11 November 2026 and may be out of date or incomplete. Nothing here is a security assessment, a guarantee or professional advice, and responsibility for securing your systems and data stays with you and your organisation.</p>
     <p>A thinking aid from the video <a href="https://youtu.be/QffClw8TdN4">The Assistant Nobody in IT Has Met</a>, current as of November 2026. It is not an assessment of any product, and not legal or compliance advice. The count follows Meta's <a href="https://ai.meta.com/blog/practical-ai-agent-security/">Agents Rule of Two</a>, which builds on Simon Willison's <a href="https://simonwillison.net/2025/Jun/16/the-lethal-trifecta/">lethal trifecta</a>. The call-back rule for bank details follows the UK National Crime Agency's <a href="https://www.nationalcrimeagency.gov.uk/who-we-are/publications/787-invoice-fraud-infosheet/file">invoice fraud guidance</a>.</p>
   </footer>
 </div>
@@ -295,12 +311,78 @@ const CONTROLS = {
   ]},
 };
 const LAMPS = {A: ['Untrusted input', 'It reads things outsiders can write', 'Untrusted'], B: ['Sensitive data', 'It can reach things that matter', 'Sensitive'], C: ['Acts or sends', 'It can change things or send them out', 'Acts']};
+// Common MCP servers. Each option is a setting or a kind of data, and lights the lamps listed (A untrusted input,
+// B sensitive data, C acts or sends). Checked against the vendors' docs on 11 November 2026; servers change, so
+// re-check before relying on it. To add or correct a server, edit this list (or open an issue on the repo).
+const SERVERS = [
+  {id: 'github', name: 'GitHub', what: "GitHub's official server (github-mcp-server)", base: '', opts: [
+    {id: 'public', t: 'Reads issues or pull requests on public repositories', s: 'public issues', l: 'A', def: 1},
+    {id: 'private', t: 'Its token reaches private repositories', s: 'private repos', l: 'B', def: 1},
+    {id: 'write', t: 'Write tools on (not in read-only mode)', s: 'write tools', l: 'C', def: 1}],
+    help: 'Read-only mode; lockdown mode limits public-repository content to authors with push access; a token scoped to the repositories the job needs.',
+    seen: ['Invariant Labs, May 2025: a malicious public issue led an agent to copy private-repository data into a public pull request.', 'https://invariantlabs.ai/blog/mcp-github-vulnerability'],
+    docs: 'https://github.com/github/github-mcp-server'},
+  {id: 'slack', name: 'Slack', what: "Slack's official server", base: '', opts: [
+    {id: 'read', t: 'Reads channels, threads or direct messages', s: 'reads messages', l: 'B', def: 1},
+    {id: 'shared', t: 'Includes channels shared with other companies, or busy with bot posts', s: 'shared channels', l: 'A', def: 0},
+    {id: 'send', t: 'Can send messages', s: 'sends messages', l: 'C', def: 1}],
+    help: 'Grant only the scopes the job needs: sending needs chat:write, so leave it out for a read-only assistant.',
+    docs: 'https://docs.slack.dev/ai/mcp-server/'},
+  {id: 'drive', name: 'Google Drive', what: "Google's Drive server (Developer Preview)", base: '', opts: [
+    {id: 'read', t: 'Searches and reads files', s: 'reads files', l: 'B', def: 1},
+    {id: 'outside', t: 'Includes files shared in from outside the company', s: 'files from outside', l: 'A', def: 1},
+    {id: 'write', t: 'Can create or copy files', s: 'creates files', l: 'C', def: 1}],
+    help: 'Still a Developer Preview. Google warns about indirect prompt injection from untrusted documents.',
+    docs: 'https://developers.google.com/workspace/drive/api/reference/mcp'},
+  {id: 'notion', name: 'Notion', what: "Notion's hosted server", base: '', opts: [
+    {id: 'read', t: 'Searches and reads pages and databases', s: 'reads pages', l: 'B', def: 1},
+    {id: 'outside', t: 'Includes pages people outside the company can edit, or clipped from the web', s: 'outside pages', l: 'A', def: 0},
+    {id: 'write', t: 'Can create or update pages', s: 'edits pages', l: 'C', def: 1}],
+    help: 'Connect it only to the pages and databases the job needs.',
+    docs: 'https://www.notion.com/en-gb/help/notion-mcp'},
+  {id: 'atlassian', name: 'Jira and Confluence', what: "Atlassian's Rovo MCP server", base: '', opts: [
+    {id: 'read', t: 'Reads issues and pages', s: 'reads issues and pages', l: 'B', def: 1},
+    {id: 'customers', t: 'Includes tickets customers raise (service desk, public portals)', s: 'customer tickets', l: 'A', def: 0},
+    {id: 'write', t: 'Write permission on (create, edit, transition, comment)', s: 'write permission', l: 'C', def: 1}],
+    help: 'Organisation admins switch Read, Write and Search on or off per app at admin.atlassian.com; delete and project-admin tools are off unless an admin enables them.',
+    docs: 'https://support.atlassian.com/atlassian-rovo-mcp-server/docs/supported-tools/'},
+  {id: 'salesforce', name: 'Salesforce', what: "Salesforce's hosted MCP servers", base: '', opts: [
+    {id: 'read', t: 'Reads records', s: 'reads records', l: 'B', def: 1},
+    {id: 'web', t: 'Includes records outsiders create (web-to-lead, cases, chat)', s: 'outsider records', l: 'A', def: 1},
+    {id: 'write', t: 'A server that can create or update records (not the reads-only one)', s: 'write server', l: 'C', def: 1}],
+    help: 'Use the reads-only SObject server where reading is enough, and connect as a user whose permissions fit the job.',
+    docs: 'https://developer.salesforce.com/docs/platform/hosted-mcp-servers/guide'},
+  {id: 'asana', name: 'Asana', what: "Asana's V2 server", base: '', opts: [
+    {id: 'read', t: 'Reads tasks, projects and comments', s: 'reads tasks', l: 'B', def: 1},
+    {id: 'guests', t: 'Includes projects with outside guests, or tasks created by forms', s: 'guests and forms', l: 'A', def: 0},
+    {id: 'write', t: 'Can create or update tasks', s: 'edits tasks', l: 'C', def: 1}],
+    help: 'It acts with the signed-in person\'s Asana permissions; on Enterprise+ plans, admins can allow or block each AI client.',
+    seen: ['June 2025: Asana disclosed a bug in its MCP feature that could expose data to other organisations, and took it offline to fix it.', 'https://www.bleepingcomputer.com/news/security/asana-warns-mcp-ai-feature-exposed-customer-data-to-other-orgs/'],
+    docs: 'https://developers.asana.com/docs/mcp-tools-reference'},
+  {id: 'supabase', name: 'Supabase', what: "Supabase's server", base: 'B', opts: [
+    {id: 'users', t: 'Tables hold text your users write (support tickets, messages, profiles)', s: 'user-written rows', l: 'A', def: 1},
+    {id: 'write', t: 'Not in read-only mode', s: 'not read-only', l: 'C', def: 1}],
+    help: 'Supabase says never to connect it to production data. Use read_only=true and scope it to one project with project_ref.',
+    seen: ['General Analysis, July 2025: a support ticket carried instructions that made an agent leak data through the Supabase server.', 'https://www.generalanalysis.com/blog/supabase-mcp-blog'],
+    docs: 'https://supabase.com/docs/guides/mcp'},
+  {id: 'playwright', name: 'Browser (Playwright)', what: "Microsoft's Playwright server", base: 'AC', opts: [
+    {id: 'signedin', t: 'The browser profile is signed in to work sites', s: 'signed-in profile', l: 'B', def: 0}],
+    help: 'Always reads pages anyone can write, and every page it opens sends a request. Its allowed-origins setting is documented as not a security boundary. Use a separate profile with no work sign-ins.',
+    docs: 'https://github.com/microsoft/playwright-mcp'},
+  {id: 'fs', name: 'Filesystem', what: 'The reference server from the MCP project', base: '', opts: [
+    {id: 'sensitive', t: 'The allowed folders hold sensitive files', s: 'sensitive folders', l: 'B', def: 1},
+    {id: 'downloads', t: 'The allowed folders hold downloads or files from outside', s: 'outside files', l: 'A', def: 0},
+    {id: 'write', t: 'Write tools on', s: 'writes files', l: 'C', def: 1}],
+    help: 'It only touches the folders you allow. Allow the fewest, and mount them read-only where you can.',
+    docs: 'https://github.com/modelcontextprotocol/servers/tree/main/src/filesystem'},
+];
+
 // Made-up setups. Each shows how the count changes with the configuration; none describes a product's defaults.
 const EXAMPLES = [
   {title: "Imogen's assistant (from the video)", name: "Imogen's assistant", owner: '', run: 'cloud', recheck: '', conns: ['inbox', 'cal', 'files', 'pay', 'mcp3'], ctrls: [], logs: 'vendor',
     note: 'The made-up week from the video: an always-on assistant on a personal plan, signed in as a finance manager, with a currency converter she found online.'},
-  {title: 'OpenClaw on a developer\'s work laptop', name: 'OpenClaw (developer laptop)', owner: '', run: 'laptop', recheck: '', conns: ['web', 'code', 'exec', 'mcp3'], ctrls: [], logs: 'none',
-    note: 'Assumes: a developer installed it themselves on a managed laptop, pointed it at the repositories, and added a community skill nobody reviewed (counted here as an unvetted server).'},
+  {title: 'OpenClaw on a developer\'s work laptop', name: 'OpenClaw (developer laptop)', owner: '', run: 'laptop', recheck: '', conns: ['web', 'exec', 'mcp3'], servers: {github: ['public', 'private', 'write']}, ctrls: [], logs: 'none',
+    note: 'Assumes: a developer installed it themselves on a managed laptop, connected GitHub with a token that reaches private repositories, and added a community skill nobody reviewed (counted here as an unvetted server).'},
   {title: 'OpenClaw on a home server, work inbox connected', name: 'OpenClaw (home server)', owner: '', run: 'self', recheck: '', conns: ['inbox', 'cal', 'send', 'web', 'exec'], ctrls: [], logs: 'none',
     note: 'Assumes: someone runs it on their own machine at home and has signed it in to their work email and calendar. Only the identity door is left.'},
   {title: 'Grok Bot on a business plan, research only', name: 'Grok Bot (research)', owner: 'Research lead', run: 'cloud', recheck: '+90', conns: ['web', 'exec'], ctrls: ['plan', 'narrow', 'list'], logs: 'ours',
@@ -325,6 +407,18 @@ const list = (a) => a.length < 2 ? a.join('') : a.slice(0, -1).join(', ') + ' an
 
 $('run').innerHTML = RUNS.map((r) => `<option value="${r.id}">${esc(r.t)}</option>`).join('');
 $('conns').innerHTML = CONNS.map((c) => `<label class="o" for="c-${c.id}"><input type="checkbox" id="c-${c.id}" data-conn="${c.id}"><span><b>${esc(c.t)}</b><small>${esc(c.why)}</small></span><span class="chips">${[...c.l].map((k) => `<span class="chip ${k}" title="${LAMPS[k][0]}">${LAMPS[k][2]}</span>`).join('')}</span></label>`).join('');
+const chipsFor = (l) => [...l].map((k) => `<span class="chip ${k}" title="${LAMPS[k][0]}">${LAMPS[k][2]}</span>`).join('');
+$('servers').innerHTML = SERVERS.map((v) => {
+  const all = [...new Set((v.base + v.opts.map((o) => o.l).join('')).split(''))].sort().join('');
+  return `<div class="srv"><label class="o" for="s-${v.id}"><input type="checkbox" id="s-${v.id}" data-srv="${v.id}"><span><b>${esc(v.name)}</b><small>${esc(v.what)}</small></span><span class="chips" title="Lamps it can light">${chipsFor(all)}</span></label>
+    <div class="srvbody">
+      ${v.opts.map((o) => `<label class="srvopt" for="so-${v.id}-${o.id}"><input type="checkbox" id="so-${v.id}-${o.id}" data-srvopt="${v.id}" data-opt="${o.id}"><span>${esc(o.t)}</span><span class="chips">${chipsFor(o.l)}</span></label>`).join('')}
+      ${v.base ? `<div class="srvmeta"><b>Always:</b> ${[...v.base].map((k) => LAMPS[k][0].toLowerCase()).join(' and ')}.</div>` : ''}
+      <div class="srvmeta"><b>Settings that help:</b> ${esc(v.help)}</div>
+      ${v.seen ? `<div class="srvmeta"><b>Seen in practice:</b> ${esc(v.seen[0])} <a href="${v.seen[1]}">Source</a></div>` : ''}
+      <div class="srvmeta"><a href="${v.docs}">Current docs</a></div>
+    </div></div>`;
+}).join('');
 $('ctrls').innerHTML = CTRLS.map((c) => `<label class="o" for="k-${c.id}"><input type="checkbox" id="k-${c.id}" data-ctrl="${c.id}"><span><b>${esc(c.t)}</b><small>${esc(c.s)}</small></span><span></span></label>`).join('');
 
 const plusDays = (n) => { const d = new Date(Date.now() + n * 864e5); return d.toISOString().slice(0, 10); };
@@ -333,13 +427,18 @@ function load(s, mode) {
   $('note').textContent = s.note ? s.note + ' A made-up setup to show the count, not a statement of how the product works by default.' : ''; $('logs').value = s.logs;
   document.querySelectorAll('[data-conn]').forEach((el) => { el.checked = s.conns.includes(el.dataset.conn); });
   document.querySelectorAll('[data-ctrl]').forEach((el) => { el.checked = s.ctrls.includes(el.dataset.ctrl); });
+  const sv = s.servers || {};
+  document.querySelectorAll('[data-srv]').forEach((el) => { el.checked = !!sv[el.dataset.srv]; });
+  document.querySelectorAll('[data-srvopt]').forEach((el) => { el.checked = !!(sv[el.dataset.srvopt] || []).includes(el.dataset.opt); });
   $('mode').textContent = mode;
   render();
 }
 function read() {
   const conns = [...document.querySelectorAll('[data-conn]:checked')].map((el) => el.dataset.conn);
   const has = (id) => $('k-' + id).checked && (!$('k-' + id).disabled || id === 'plan');
-  return {name: $('name').value.trim(), owner: $('owner').value.trim(), run: $('run').value, recheck: $('recheck').value, logs: $('logs').value, conns, has};
+  const servers = {};
+  document.querySelectorAll('[data-srv]:checked').forEach((el) => { servers[el.dataset.srv] = [...document.querySelectorAll(`[data-srvopt="${el.dataset.srv}"]:checked`)].map((o) => o.dataset.opt); });
+  return {servers, name: $('name').value.trim(), owner: $('owner').value.trim(), run: $('run').value, recheck: $('recheck').value, logs: $('logs').value, conns, has};
 }
 
 function render() {
@@ -352,9 +451,16 @@ function render() {
 
   const s = read();
   const run = RUNS.find((r) => r.id === s.run);
-  const picked = CONNS.filter((c) => s.conns.includes(c.id));
+  const pickedC = CONNS.filter((c) => s.conns.includes(c.id));
   const by = {A: [], B: [], C: []};
-  picked.forEach((c) => [...c.l].forEach((k) => by[k].push(low(c.t))));
+  pickedC.forEach((c) => [...c.l].forEach((k) => by[k].push(low(c.t))));
+  const pickedS = SERVERS.filter((v) => s.servers[v.id]);
+  pickedS.forEach((v) => {
+    [...v.base].forEach((k) => by[k].push(v.name));
+    v.opts.filter((o) => s.servers[v.id].includes(o.id)).forEach((o) => [...o.l].forEach((k) => by[k].push(`${v.name} (${o.s})`)));
+  });
+  ['A', 'B', 'C'].forEach((k) => { by[k] = [...new Set(by[k])]; });
+  const picked = [...pickedC.map((c) => ({t: low(c.t)})), ...pickedS.map((v) => ({t: `the ${v.name} MCP server`}))];
   const lit = ['A', 'B', 'C'].filter((k) => by[k].length);
   const n = lit.length;
   const agent = s.name || 'This agent';
@@ -415,7 +521,7 @@ function render() {
   const reach = picked.length ? `Lamps lit: ${n} of 3. ` + lit.map((k) => `${LAMPS[k][0]}: ${list(by[k])}`).join('. ') + '.' : gap('Not counted yet.');
   const logs = {ours: 'From logs we hold.', vendor: gap("Only from the vendor's side. Ask what they keep, for how long, and how we get it."), none: gap('We would not. No record is kept, or nobody knows where it is.')}[s.logs];
   const rows = [
-    ['1. What have we got?', `${esc(agent)}, running on ${run.short}. Connected to: ${picked.length ? esc(list(picked.map((c) => low(c.t)))) : gap('nothing listed')}.`],
+    ['1. What have we got?', `${esc(agent)}, running on ${run.short}. Connected to: ${picked.length ? esc(list(picked.map((c) => c.t))) : gap('nothing listed')}.`],
     ['2. Who owns it?', s.owner ? esc(s.owner) : gap('No named owner.')],
     ['3. What can it reach?', reach + (n === 3 ? (s.has('human') ? ' A person approves what it sends, pays or changes.' : ' ' + gap('Nothing stands between the three.')) : '')],
     ['4. What happens on a bad day?', 'Steps below.' + (pays ? (s.has('callback') ? ' Bank-detail changes need a call-back.' : ' ' + gap('No call-back rule for bank-detail changes.')) : '')],
@@ -451,7 +557,9 @@ function paperText() {
   return lines.join('\n');
 }
 
-$('form').addEventListener('input', () => { $('mode').textContent = 'Your agent'; $('note').textContent = ''; $('examples').value = ''; render(); });
+$('form').addEventListener('input', (e) => {
+  const id = e.target.dataset && e.target.dataset.srv;
+  if (id && e.target.checked) SERVERS.find((v) => v.id === id).opts.forEach((o) => { $(`so-${id}-${o.id}`).checked = !!o.def; }); $('mode').textContent = 'Your agent'; $('note').textContent = ''; $('examples').value = ''; render(); });
 $('form').addEventListener('submit', (e) => e.preventDefault());
 $('examples').innerHTML = '<option value="">Choose…</option>' + EXAMPLES.map((e, i) => `<option value="${i}">${esc(e.title)}</option>`).join('');
 const loadEx = (i) => { load(EXAMPLES[i], 'Example'); $('examples').value = String(i); };
