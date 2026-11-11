@@ -170,6 +170,7 @@ h3.grp span { text-transform: none; letter-spacing: 0; font-weight: 400; color: 
 .srvopt { display: grid; grid-template-columns: 20px 1fr auto; gap: 10px; align-items: start; font-size: 15px; cursor: pointer; }
 .srvopt input { width: 18px; height: 18px; margin: 2px 0 0; accent-color: var(--accent); }
 .srvmeta { font-size: 14px; color: var(--muted); }
+.srvopt.approved { border-top: 1px dashed var(--line); padding-top: 8px; margin-top: 2px; }
 .srvmeta b { color: var(--ink); font-weight: 600; }
 .srvmeta a { color: var(--lamp-a); }
 .paperhead { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; margin-bottom: 12px; }
@@ -244,6 +245,7 @@ footer a { color: var(--lamp-a); }
         <p class="disclaimer" id="srvnote"><b>Checked against each vendor's own documentation on 11 November 2026.</b> Servers add and change tools often, so check the current docs before you rely on this. The risk factors show what a server can do depending on how it is set up; they are not a security rating or a verdict on the product. This tool tests nothing and does not make any agent safe: securing your systems stays your responsibility.</p>
         <div class="opts" id="servers"></div>
         </details>
+        <div class="opts" id="conns-mcp" style="margin-top:8px"></div>
       </section>
       <section class="step" data-tab="3" role="tabpanel">
         <h2><span class="n">3</span>What controls do we have in place?</h2>
@@ -306,8 +308,8 @@ const CONNS = [
   {id: 'people', t: 'Customer or staff records', l: 'B', why: 'Personal data.'},
   {id: 'pay', t: 'Payments or finance system', l: 'BC', why: 'Sensitive, and it can change where money goes.'},
   {id: 'code', t: 'Source code or deployments', l: 'BC', why: 'Secrets live here, and changes ship.'},
-  {id: 'mcpok', t: 'MCP servers on our approved list', l: 'C', why: 'Any tool it calls is also a way out.'},
-  {id: 'mcp3', t: 'An MCP server nobody has vetted', l: 'AC', why: 'Its descriptions and replies are untrusted input; every call sends data to it.'},
+  {id: 'mcpok', t: 'Other MCP servers on our approved list', l: 'C', why: 'Any tool it calls is also a way out.'},
+  {id: 'mcp3', t: 'Another MCP server nobody has vetted', l: 'AC', why: 'Its descriptions and replies are untrusted input; every call sends data to it.'},
   {id: 'exec', t: 'Runs code on its own computer', l: 'C', why: 'It can do whatever that computer can.'},
 ];
 const RUNS = [
@@ -520,7 +522,9 @@ const low = (t) => /^[A-Z]{2}/.test(t) ? t : t.replace(/^An? /, (m) => m.toLower
 const list = (a) => a.length < 2 ? a.join('') : a.slice(0, -1).join(', ') + ' and ' + a[a.length - 1];
 
 $('run').innerHTML = RUNS.map((r) => `<option value="${r.id}">${esc(r.t)}</option>`).join('');
-$('conns').innerHTML = CONNS.map((c) => `<label class="o" for="c-${c.id}"><input type="checkbox" id="c-${c.id}" data-conn="${c.id}"><span><b>${esc(c.t)}</b><small>${esc(c.why)}</small></span><span class="chips">${[...c.l].map((k) => `<span class="chip ${k}" title="${LAMPS[k][0]}">${LAMPS[k][2]}</span>`).join('')}</span></label>`).join('');
+const connHtml = (c) => `<label class="o" for="c-${c.id}"><input type="checkbox" id="c-${c.id}" data-conn="${c.id}"><span><b>${esc(c.t)}</b><small>${esc(c.why)}</small></span><span class="chips">${[...c.l].map((k) => `<span class="chip ${k}" title="${LAMPS[k][0]}">${LAMPS[k][2]}</span>`).join('')}</span></label>`;
+$('conns').innerHTML = CONNS.filter((c) => !c.id.startsWith('mcp')).map(connHtml).join('');
+$('conns-mcp').innerHTML = CONNS.filter((c) => c.id.startsWith('mcp')).map(connHtml).join('');
 const planTag = (a) => a.plan === 'yes' ? '<span class="tagp yes">Company plan</span>' : a.plan === 'no' ? '<span class="tagp no">No company plan</span>' : a.plan === 'self' ? '<span class="tagp self">Self-hosted</span>' : '';
 $('agents').innerHTML = AGENTS.map((a) => `<label class="agentcard" for="a-${a.id}"><input type="radio" name="agent" id="a-${a.id}" value="${a.id}" data-agent="${a.id}"><b>${esc(a.name)}</b><small>${esc(a.by)}</small>${planTag(a)}</label>`).join('');
 const agentNow = () => AGENTS.find((a) => a.id === (document.querySelector('[data-agent]:checked') || {}).value) || AGENTS[AGENTS.length - 1];
@@ -536,6 +540,7 @@ $('servers').innerHTML = SERVERS.map((v) => {
   return `<div class="srv"><label class="o" for="s-${v.id}"><input type="checkbox" id="s-${v.id}" data-srv="${v.id}"><span><b>${esc(v.name)}</b><small>${esc(v.what)}</small></span><span class="chips" title="Risk factors it can add">${chipsFor(all)}</span></label>
     <div class="srvbody">
       ${v.opts.map((o) => `<label class="srvopt" for="so-${v.id}-${o.id}"><input type="checkbox" id="so-${v.id}-${o.id}" data-srvopt="${v.id}" data-opt="${o.id}"><span>${esc(o.t)}</span><span class="chips">${chipsFor(o.l)}</span></label>`).join('')}
+      <label class="srvopt approved" for="sk-${v.id}"><input type="checkbox" id="sk-${v.id}" data-srvok="${v.id}"><span><b>On our approved list:</b> vetted, with an owner, and enforced by an allowlist or gateway</span><span></span></label>
       ${v.base ? `<div class="srvmeta"><b>Always:</b> ${[...v.base].map((k) => LAMPS[k][0].toLowerCase()).join(' and ')}.</div>` : ''}
       <div class="srvmeta"><b>Settings that help:</b> ${esc(v.help)}</div>
       ${v.seen ? `<div class="srvmeta"><b>Seen in practice:</b> ${esc(v.seen[0])} <a href="${v.seen[1]}">Source</a></div>` : ''}
@@ -557,6 +562,7 @@ function load(s, mode) {
   const sv = s.servers || {};
   $('srvbox').open = Object.keys(sv).length > 0;
   document.querySelectorAll('[data-srv]').forEach((el) => { el.checked = !!sv[el.dataset.srv]; });
+  document.querySelectorAll('[data-srvok]').forEach((el) => { el.checked = !!(s.srvok || {})[el.dataset.srvok]; });
   document.querySelectorAll('[data-srvopt]').forEach((el) => { el.checked = !!(sv[el.dataset.srvopt] || []).includes(el.dataset.opt); });
   $('mode').textContent = mode;
   render();
@@ -566,12 +572,16 @@ function read() {
   const has = (id) => $('k-' + id).checked && (!$('k-' + id).disabled || id === 'plan');
   const servers = {};
   document.querySelectorAll('[data-srv]:checked').forEach((el) => { servers[el.dataset.srv] = [...document.querySelectorAll(`[data-srvopt="${el.dataset.srv}"]:checked`)].map((o) => o.dataset.opt); });
-  return {servers, name: $('name').value.trim(), owner: $('owner').value.trim(), run: $('run').value, recheck: $('recheck').value, logs: $('k-logs').checked ? 'ours' : 'none', conns, has};
+  const srvok = {};
+  document.querySelectorAll('[data-srvok]').forEach((el) => { srvok[el.dataset.srvok] = el.checked; });
+  return {servers, srvok, name: $('name').value.trim(), owner: $('owner').value.trim(), run: $('run').value, recheck: $('recheck').value, logs: $('k-logs').checked ? 'ours' : 'none', conns, has};
 }
 
 function render() {
   // An unvetted server contradicts "only servers on our list"; no payments system, no payment-detail question.
-  const unvetted = $('c-mcp3').checked, pays = $('c-pay').checked;
+  const notListed = SERVERS.filter((v) => $('s-' + v.id).checked && !$('sk-' + v.id).checked).map((v) => v.name);
+  if ($('c-mcp3').checked) notListed.push('another server nobody has vetted');
+  const unvetted = notListed.length > 0, pays = $('c-pay').checked;
   $('k-list').disabled = unvetted; if (unvetted) $('k-list').checked = false;
   $('k-callback').disabled = !pays; if (!pays) $('k-callback').checked = false;
   const ours = $('run').value === 'server'; // we run it ourselves, so the plan question answers itself
@@ -624,7 +634,7 @@ function render() {
   const miss = [];
   if (!plan) miss.push(['plan', noPlan ? `a plan the company controls (${A.name} has none: ${A.planNote}, as of November 2026)` : 'a plan the company controls']);
   if (!s.has('narrow')) miss.push(['narrow', 'the narrowest access that does the job']);
-  if (!s.has('list')) miss.push(['list', unvetted ? 'only servers on our list (it uses one nobody has vetted)' : 'only servers on our list']);
+  if (!s.has('list')) miss.push(['list', unvetted ? `only servers on our list (not on it: ${list(notListed)})` : 'only servers on our list']);
   if (!s.owner || !s.recheck) miss.push(['owner', !s.owner && !s.recheck ? 'a named owner and a review date' : !s.owner ? 'a named owner' : 'a review date']);
   if (n === 3 && !s.has('human')) miss.push(['human', 'human approval, or one risk factor removed']);
   if (pays && !s.has('callback')) miss.push(['callback', 'out-of-band verification of payment-detail changes']);

@@ -4,7 +4,7 @@ A one-page tool for whoever sets the rules for other people's AI agents. Open `i
 
 - **Risk factors:** untrusted input, sensitive data, and the ability to act or send data out (the video shows them as three lamps). Any two can be managed; all three need human approval or one factor removed.
 - **Which agent:** pick Grok Bot, dots, Claude Duet, Muse, OpenClaw, Hermes Agent or a custom agent. Each shows key facts as of November 2026, whether a company-controlled plan exists, the settings that help, and a link to current docs. Where no company plan exists, the approval decision says so.
-- **Common MCP servers:** ten popular servers (GitHub, Slack, Google Drive, Notion, Jira and Confluence, Salesforce, Asana, Supabase, a Playwright browser and the filesystem server), each with the settings that decide which risk factors it adds, the settings that help, a real incident where one is public, and a link to its current docs.
+- **Common MCP servers:** ten popular servers (GitHub, Slack, Google Drive, Notion, Jira and Confluence, Salesforce, Asana, Supabase, a Playwright browser and the filesystem server), each with the settings that decide which risk factors it adds, the settings that help, a real incident where one is public, and a link to its current docs. Mark each one as on your approved list or not: any server that isn't blocks the "only servers on our list" condition.
 - **The doors:** where you can still enforce rules (device, agent app, network, identity), given where the agent runs.
 - **Approval decision:** approved with conditions, or not approved yet with the conditions still missing, plus a reply you can send to whoever asked.
 - **Getting to yes:** the controls that close each missing term. The full list is in [CONTROLS.md](CONTROLS.md).
