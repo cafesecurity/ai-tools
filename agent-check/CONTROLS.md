@@ -64,9 +64,9 @@ Current as of November 2026. A thinking aid, not an assessment of any product, a
 - Hold the first payment to changed details for a second approver.
 - Agree in advance who rings the bank if money moves: the first hour matters.
 
-## Also worth fixing: get the audit log into your hands
+## Recommended: log its activity where you can review it
 
-*Technical.* Not a term for "yes", but without it a bad day cannot be reconstructed.
+*Technical.* Recommended rather than required for approval, but without it a bad day cannot be reconstructed.
 
 - Ask the vendor what it records, for how long, and how you get it.
 - Where an export exists, send it to your own log store.
