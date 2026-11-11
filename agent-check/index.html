@@ -495,24 +495,32 @@ const AGENTS = [
 
 // Made-up setups. Each shows how the count changes with the configuration; none describes a product's defaults.
 const EXAMPLES = [
-  {title: "Imogen's assistant (from the video)", agent: 'custom', name: "Imogen's assistant", owner: '', run: 'cloud', recheck: '', conns: ['inbox', 'cal', 'files', 'pay', 'mcp3'], ctrls: [], logs: 'vendor',
-    note: 'The made-up week from the video: an always-on assistant on a personal plan, signed in as a finance manager, with a currency converter she found online.'},
-  {title: 'OpenClaw on a developer\'s work laptop', agent: 'openclaw', name: 'OpenClaw (developer laptop)', owner: '', run: 'laptop', recheck: '', conns: ['web', 'exec', 'mcp3'], servers: {github: ['public', 'private', 'write']}, ctrls: [], logs: 'none',
-    note: 'Assumes: a developer installed it themselves on a managed laptop, connected GitHub with a token that reaches private repositories, and added a community skill nobody reviewed (counted here as an unvetted server).'},
-  {title: 'OpenClaw on a home server, work inbox connected', agent: 'openclaw', name: 'OpenClaw (home server)', owner: '', run: 'self', recheck: '', conns: ['inbox', 'cal', 'send', 'web', 'exec'], ctrls: [], logs: 'none',
-    note: 'Assumes: someone runs it on their own machine at home and has signed it in to their work email and calendar. Only the identity door is left.'},
-  {title: 'Grok Bot on a business plan, research only', agent: 'grok', name: 'Grok Bot (research)', owner: 'Research lead', run: 'cloud', recheck: '+90', conns: ['web', 'exec'], ctrls: ['plan', 'narrow', 'list'], logs: 'ours',
-    note: 'Assumes: a company plan with audit logs exported to us, used to read the public web and draft reports, with no company data connected. No sensitive data in reach.'},
-  {title: 'dots in a company workspace, sales team', agent: 'dots', name: 'dots (sales team)', owner: 'Head of Sales Ops', run: 'cloud', recheck: '+90', conns: ['inbox', 'cal', 'send', 'people', 'mcpok'], ctrls: ['plan', 'list', 'human'], logs: 'ours',
-    note: 'Assumes: switched on in a company workspace, connected to mail, calendar and the customer system through approved servers, with broad access and a person approving what it sends.'},
-  {title: 'Claude Duet on an executive\'s personal plan', agent: 'duet', name: 'Claude Duet (executive)', owner: 'The executive', run: 'cloud', recheck: '', conns: ['inbox', 'cal', 'files', 'send'], ctrls: ['human'], logs: 'vendor',
-    note: 'Assumes: a personal subscription signed in to work mail, calendar and files, relying on the product asking before it sends. No company contract covers the data.'},
-  {title: 'Muse on a personal account, marketing', agent: 'muse', name: 'Muse (marketing)', owner: 'Marketing manager', run: 'cloud', recheck: '', conns: ['web', 'send'], ctrls: ['narrow'], logs: 'vendor',
-    note: 'Assumes: a personal account used to research the public web and send messages, with no company data connected. No sensitive data in reach, so the risk is acceptable; the terms are what fail.'},
-  {title: 'Hermes Agent on a server we run, behind our gateway', agent: 'hermes', name: 'Hermes Agent (internal)', owner: 'Platform team lead', run: 'server', recheck: '+90', conns: ['files', 'code', 'mcpok', 'exec'], ctrls: ['plan', 'narrow', 'list', 'human', 'alerts'], logs: 'ours',
-    note: 'Assumes: self-hosted on our own server, reading internal files and code only, with no inbox or web access. No untrusted input, so nothing outsiders write reaches it.'},
+  {title: "Imogen's assistant (from the video)", agent: 'custom', name: "Imogen's assistant", owner: '', run: 'cloud', recheck: '',
+    conns: ['inbox', 'cal', 'files', 'pay', 'mcp3'], ctrls: [],
+    note: 'The made-up week from the video: an always-on assistant on a personal plan, signed in as a finance manager to her inbox, calendar, company search and the payments system, plus a currency converter she found online (counted as another server nobody has vetted). No controls in place.'},
+  {title: 'OpenClaw on a developer\'s work laptop', agent: 'openclaw', name: 'OpenClaw (developer laptop)', owner: '', run: 'laptop', recheck: '',
+    conns: ['web', 'exec', 'mcp3'], servers: {github: ['public', 'private', 'write']}, srvok: {github: false}, ctrls: [],
+    note: 'Assumes: a developer installed it themselves on a managed laptop, connected the GitHub server with write tools and a token that reaches private repositories, and added a community skill nobody reviewed. The combination from the GitHub incident.'},
+  {title: 'OpenClaw on a home server, work inbox connected', agent: 'openclaw', name: 'OpenClaw (home server)', owner: '', run: 'self', recheck: '',
+    conns: ['inbox', 'cal', 'send', 'web', 'exec'], ctrls: [],
+    note: 'Assumes: someone runs it on their own machine at home and has signed it in to their work email and calendar. Identity is the only place left to enforce rules.'},
+  {title: 'Grok Bot on a business plan, research only', agent: 'grok', name: 'Grok Bot (research)', owner: 'Research lead', run: 'cloud', recheck: '+90',
+    conns: ['web', 'exec'], ctrls: ['plan', 'narrow', 'logs'],
+    note: 'Assumes: an Enterprise plan with audit logs exported to us, used to read the public web and draft reports, with no company data and no MCP servers connected. No sensitive data in reach, so it can be approved; alerting is still recommended.'},
+  {title: 'dots in a company workspace, sales team', agent: 'dots', name: 'dots (sales team)', owner: 'Head of Sales Ops', run: 'cloud', recheck: '+90',
+    conns: ['inbox', 'cal', 'send'], servers: {salesforce: ['read', 'web', 'write']}, srvok: {salesforce: true}, ctrls: ['plan', 'list', 'human', 'logs'],
+    note: 'Assumes: switched on in a company workspace with mail and calendar, plus the Salesforce server (on our approved list) with write access, and a person approving what it sends. Access is broader than the job needs, so not yet.'},
+  {title: 'Claude Duet on an executive\'s personal plan', agent: 'duet', name: 'Claude Duet (executive)', owner: 'The executive', run: 'cloud', recheck: '',
+    conns: ['inbox', 'cal', 'files', 'send'], ctrls: ['human'],
+    note: 'Assumes: a personal subscription signed in to work mail, calendar and files, relying on the product asking before it sends. No company plan exists for it yet, so it cannot be approved.'},
+  {title: 'Muse on a personal account, marketing', agent: 'muse', name: 'Muse (marketing)', owner: 'Marketing manager', run: 'cloud', recheck: '',
+    conns: ['web', 'send'], ctrls: ['narrow'],
+    note: 'Assumes: a personal account used to research the public web and send messages, with no company data connected. Only two risk factors, so the risk is acceptable; the approval conditions are what fail.'},
+  {title: 'Hermes Agent on a server we run, behind our gateway', agent: 'hermes', name: 'Hermes Agent (internal)', owner: 'Platform team lead', run: 'server', recheck: '+90',
+    conns: ['files', 'exec'], servers: {github: ['private']}, srvok: {github: true}, ctrls: ['plan', 'narrow', 'list', 'human', 'logs', 'alerts'],
+    note: 'Assumes: self-hosted on our own server, reading internal files and the GitHub server in read-only mode on private repositories (on our approved list), with no inbox or web access. No untrusted input, every condition met, logging and alerting on.'},
 ];
-const BLANK = {agent: 'custom', name: '', owner: '', run: 'laptop', recheck: '', conns: [], ctrls: [], logs: 'ours'};
+const BLANK = {agent: 'custom', name: '', owner: '', run: 'laptop', recheck: '', conns: [], ctrls: []};
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
@@ -582,7 +590,9 @@ function render() {
   const notListed = SERVERS.filter((v) => $('s-' + v.id).checked && !$('sk-' + v.id).checked).map((v) => v.name);
   if ($('c-mcp3').checked) notListed.push('another server nobody has vetted');
   const unvetted = notListed.length > 0, pays = $('c-pay').checked;
-  $('k-list').disabled = unvetted; if (unvetted) $('k-list').checked = false;
+  // With no MCP servers connected, the approved-list condition does not apply.
+  const anyMcp = $('c-mcpok').checked || $('c-mcp3').checked || SERVERS.some((v) => $('s-' + v.id).checked);
+  $('k-list').disabled = unvetted || !anyMcp; if (unvetted || !anyMcp) $('k-list').checked = false;
   $('k-callback').disabled = !pays; if (!pays) $('k-callback').checked = false;
   const ours = $('run').value === 'server'; // we run it ourselves, so the plan question answers itself
   const A = agentNow(), noPlan = A.plan === 'no';
@@ -634,7 +644,7 @@ function render() {
   const miss = [];
   if (!plan) miss.push(['plan', noPlan ? `a plan the company controls (${A.name} has none: ${A.planNote}, as of November 2026)` : 'a plan the company controls']);
   if (!s.has('narrow')) miss.push(['narrow', 'the narrowest access that does the job']);
-  if (!s.has('list')) miss.push(['list', unvetted ? `only servers on our list (not on it: ${list(notListed)})` : 'only servers on our list']);
+  if (anyMcp && !s.has('list')) miss.push(['list', unvetted ? `only servers on our list (not on it: ${list(notListed)})` : 'only servers on our list']);
   if (!s.owner || !s.recheck) miss.push(['owner', !s.owner && !s.recheck ? 'a named owner and a review date' : !s.owner ? 'a named owner' : 'a review date']);
   if (n === 3 && !s.has('human')) miss.push(['human', 'human approval, or one risk factor removed']);
   if (pays && !s.has('callback')) miss.push(['callback', 'out-of-band verification of payment-detail changes']);
@@ -648,7 +658,7 @@ function render() {
   $('reply').textContent = reply;
   const nSrv = Object.keys(s.servers).length;
   $('cnt-2').textContent = picked.length ? String(picked.length) : '';
-  const appl = CTRLS.filter((c) => !$('k-' + c.id).disabled || c.id === 'plan');
+  const appl = CTRLS.filter((c) => !$('k-' + c.id).disabled || c.id === 'plan' || (c.id === 'list' && anyMcp) || (c.id === 'plan' && noPlan));
   $('cnt-3').textContent = picked.length ? `${appl.filter((c) => s.has(c.id)).length}/${appl.length}` : '';
   $('cnt-4').textContent = !picked.length ? '' : yes ? 'Approved' : 'Not yet';
   $('cnt-4').className = !picked.length ? '' : yes ? 'ok' : 'no';
