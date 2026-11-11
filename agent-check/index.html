@@ -23,6 +23,7 @@
   --lamp-c: #FF7A70;      /* acts or sends */
   --good: #5ED6C0;
   --bad: #FF7A70;
+  --mid: #C8D65A;         /* moderate risk: between good and amber */
   --paper: #F6F2E8;
   --paper-ink: #17243A;
   --font: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
@@ -621,7 +622,7 @@ function render() {
   if (!picked.length) { risk = 'Nothing connected yet'; riskCol = 'var(--muted)'; riskLine = 'Tick what it can reach in step 2.'; }
   else if (n === 3 && s.has('human')) { risk = 'Elevated risk: all three factors, mitigated by human approval'; riskCol = 'var(--accent)'; riskLine = 'Workable, but approvals wear thin: the twentieth prompt gets less attention than the first. Removing one factor is sturdier.'; }
   else if (n === 3) { risk = 'High risk: all three factors, no mitigating control'; riskCol = 'var(--bad)'; riskLine = 'One planted instruction could take sensitive data and send it out, or change a record. Remove one factor, or require human approval.'; }
-  else if (n === 2) { risk = 'Moderate risk: two of three factors'; riskCol = 'var(--good)'; riskLine = `${{A: 'Nothing outsiders write reaches it, so there is no easy way to plant an instruction.', B: 'A planted instruction has no sensitive data to steal, though it could still make the agent act.', C: 'It can read but not send or change anything, so a planted instruction has no way out.'}[['A', 'B', 'C'].find((k) => !by[k].length)]} The next tool someone adds could change that, so reassess whenever its tools change.`; }
+  else if (n === 2) { risk = 'Moderate risk: two of three factors'; riskCol = 'var(--mid)'; riskLine = `${{A: 'Nothing outsiders write reaches it, so there is no easy way to plant an instruction.', B: 'A planted instruction has no sensitive data to steal, though it could still make the agent act.', C: 'It can read but not send or change anything, so a planted instruction has no way out.'}[['A', 'B', 'C'].find((k) => !by[k].length)]} The next tool someone adds could change that, so reassess whenever its tools change.`; }
   else { risk = 'Low risk: one factor or none'; riskCol = 'var(--good)'; riskLine = 'A good place to start. Reassess whenever its tools change.'; }
   $('risk').style.setProperty('--v', riskCol);
   $('risk').innerHTML = `<strong>${risk}</strong><span>${riskLine}</span>`;
