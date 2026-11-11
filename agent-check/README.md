@@ -13,7 +13,7 @@ It is a single self-contained file. Nothing you type leaves the page: there is n
 
 Eight made-up example setups are built in (an always-on assistant from the video, OpenClaw, Grok Bot, dots, Claude Duet, Muse and Hermes Agent in different configurations). They show how the count changes with the configuration; none describes how a product works by default.
 
-From the video ["The Assistant Nobody in IT Has Met"](https://youtu.be/QffClw8TdN4). Current as of November 2026. A thinking aid, not an assessment of any product, and not legal or compliance advice.
+From the video ["Securing AI Agents at Work"](https://youtu.be/QffClw8TdN4). Current as of November 2026. A thinking aid, not an assessment of any product, and not legal or compliance advice.
 
 ## Disclaimer
 
