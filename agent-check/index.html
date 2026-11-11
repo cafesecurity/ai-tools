@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI Agent Check</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+/* Layout idea: inputs on the left, a sticky live verdict on the right, the printable page below.
+   One visual world (the video series' navy blueprint), single theme by choice. */
+:root {
+  color-scheme: dark;
+  --bg: #0E2A4E;
+  --panel: #14365F;
+  --panel-2: #0A2040;
+  --line: #2C4F7C;
+  --ink: #EAF1FA;
+  --muted: #9DB3CE;
+  --accent: #FFB547;      /* amber: the agent */
+  --lamp-a: #8EC5FF;      /* untrusted input */
+  --lamp-b: #FFB547;      /* sensitive data */
+  --lamp-c: #FF7A70;      /* acts or sends */
+  --good: #5ED6C0;
+  --bad: #FF7A70;
+  --paper: #F6F2E8;
+  --paper-ink: #17243A;
+  --font: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--bg);
+  background-image: linear-gradient(rgba(142,197,255,.05) 1px, transparent 1px), linear-gradient(90deg, rgba(142,197,255,.05) 1px, transparent 1px);
+  background-size: 40px 40px;
+  color: var(--ink); font-family: var(--font); font-size: 17px; line-height: 1.5;
+}
+.wrap { max-width: 1180px; margin: 0 auto; padding: 28px 20px 64px; }
+header h1 { font-size: 38px; line-height: 1.1; margin: 0 0 8px; text-wrap: balance; }
+header h1 span { color: var(--accent); }
+header p { margin: 0; max-width: 62ch; color: var(--muted); }
+.bar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 18px 0 26px; }
+.pick { display: flex; gap: 8px; align-items: center; font-size: 15px; color: var(--muted); font-weight: 500; }
+.pick select { width: auto; max-width: 100%; border-radius: 999px; padding: 8px 14px; font-weight: 600; }
+.note { margin: -14px 0 24px; max-width: 80ch; font-size: 15px; color: var(--muted); border-left: 4px solid var(--accent); padding-left: 12px; }
+.note:empty { display: none; }
+.tag { font-size: 14px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--accent); }
+button {
+  font: inherit; font-weight: 600; color: var(--ink); background: var(--panel); border: 2px solid var(--line);
+  border-radius: 999px; padding: 8px 18px; cursor: pointer;
+}
+button:hover { border-color: var(--accent); }
+button.primary { background: var(--accent); border-color: var(--accent); color: #1B1403; }
+:focus-visible { outline: 3px solid var(--lamp-a); outline-offset: 2px; }
+.grid { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 28px; align-items: start; }
+@media (max-width: 880px) { .grid { grid-template-columns: 1fr; } .result { position: static !important; } }
+section.step { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 20px; margin-bottom: 18px; }
+.step h2 { font-size: 22px; margin: 0 0 4px; display: flex; gap: 12px; align-items: baseline; }
+.step h2 .n { font-family: var(--mono); color: var(--accent); font-size: 16px; }
+.step > p { margin: 0 0 14px; color: var(--muted); font-size: 15px; }
+.fields { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 520px) { .fields { grid-template-columns: 1fr; } }
+label.f { display: flex; flex-direction: column; gap: 4px; font-size: 14px; color: var(--muted); font-weight: 500; }
+input[type=text], input[type=date], select {
+  font: inherit; color: var(--ink); background: var(--panel-2); border: 2px solid var(--line); border-radius: 8px; padding: 8px 10px; width: 100%;
+}
+.opts { display: flex; flex-direction: column; gap: 8px; }
+label.o {
+  display: grid; grid-template-columns: 22px 1fr auto; gap: 10px; align-items: start;
+  background: var(--panel-2); border: 2px solid var(--line); border-radius: 10px; padding: 10px 12px; cursor: pointer;
+}
+label.o:has(input:checked) { border-color: var(--accent); }
+label.o:has(input:disabled) { opacity: .55; cursor: not-allowed; }
+label.o input { width: 20px; height: 20px; margin: 3px 0 0; accent-color: var(--accent); }
+label.o b { font-weight: 600; }
+label.o small { display: block; color: var(--muted); font-size: 14px; }
+.chips { display: flex; gap: 4px; }
+.chip { font-family: var(--mono); font-size: 13px; width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; color: #10203A; font-weight: 700; }
+.chip.A { background: var(--lamp-a); } .chip.B { background: var(--lamp-b); } .chip.C { background: var(--lamp-c); }
+.result { position: sticky; top: 16px; background: var(--panel-2); border: 2px solid var(--line); border-radius: 16px; padding: 22px; }
+.result h2 { font-size: 15px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 0 0 14px; }
+.lamps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px; }
+.lamp { text-align: center; }
+.bulb {
+  width: 76px; height: 76px; border-radius: 50%; margin: 0 auto 8px; display: grid; place-items: center;
+  font-size: 34px; font-weight: 700; border: 4px solid var(--c); color: var(--c); background: var(--panel);
+  transition: background .2s, box-shadow .2s;
+}
+.lamp.on .bulb { background: var(--c); color: #10203A; box-shadow: 0 0 0 10px color-mix(in srgb, var(--c) 22%, transparent); }
+.lamp b { display: block; font-size: 15px; }
+.lamp small { color: var(--muted); font-size: 13px; display: block; min-height: 2.6em; }
+.lamp .state { font-family: var(--mono); font-size: 12px; letter-spacing: .08em; color: var(--muted); }
+.lamp.on .state { color: var(--c); }
+.verdict { border-left: 6px solid var(--v); background: var(--panel); border-radius: 8px; padding: 12px 14px; margin: 0 0 16px; }
+.verdict strong { display: block; font-size: 21px; line-height: 1.25; color: var(--v); }
+.verdict span { font-size: 15px; color: var(--ink); }
+h3 { font-size: 14px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 18px 0 8px; }
+ul.plain { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; font-size: 15px; }
+ul.plain li { display: grid; grid-template-columns: 26px 1fr; gap: 6px; }
+.ok { color: var(--good); font-weight: 700; } .no { color: var(--bad); font-weight: 700; } .maybe { color: var(--accent); font-weight: 700; }
+.reply { background: var(--panel); border: 1px dashed var(--line); border-radius: 8px; padding: 12px 14px; font-size: 15px; white-space: pre-wrap; }
+.toyes { margin-top: 36px; }
+.toyes > h2 { font-size: 26px; margin: 0 0 4px; }
+.toyes > p { margin: 0 0 16px; color: var(--muted); max-width: 70ch; }
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; }
+.card { background: var(--panel); border: 1px solid var(--line); border-top: 5px solid var(--bad); border-radius: 12px; padding: 16px 18px; }
+.card.soft { border-top-color: var(--accent); }
+.card h3 { margin: 0 0 2px; font-size: 18px; letter-spacing: 0; text-transform: none; color: var(--ink); }
+.card .why { margin: 0 0 10px; font-size: 14px; color: var(--muted); }
+.card ul { margin: 0; padding-left: 20px; font-size: 15px; display: flex; flex-direction: column; gap: 6px; }
+.paper ul.fix { margin: 0 0 8px; padding-left: 20px; font-size: 14px; }
+.paper .fixh { font-weight: 700; font-size: 15px; margin: 8px 0 2px; }
+.paperwrap { margin-top: 36px; }
+.paperhead { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.paperhead h2 { margin: 0; font-size: 26px; }
+#copied { color: var(--good); font-size: 15px; min-width: 6em; }
+.paper { background: var(--paper); color: var(--paper-ink); border-radius: 6px; padding: 34px 38px; box-shadow: 0 12px 40px rgba(0,0,0,.35); }
+.paper h1 { font-size: 26px; margin: 0 0 2px; }
+.paper .meta { font-size: 14px; color: #55627A; margin-bottom: 18px; }
+.paper table { width: 100%; border-collapse: collapse; font-size: 15px; }
+.paper th, .paper td { text-align: left; vertical-align: top; padding: 9px 10px; border-bottom: 1px solid #D5CDB9; }
+.paper th { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: #55627A; }
+.paper td:first-child { font-weight: 700; width: 26%; }
+.paper td:last-child { width: 15%; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.paper .gap { color: #B3261E; font-weight: 600; }
+.paper h2 { font-size: 16px; margin: 22px 0 6px; letter-spacing: .04em; text-transform: uppercase; }
+.paper ol { margin: 0; padding-left: 22px; font-size: 15px; }
+.paper .two { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; }
+@media (max-width: 700px) { .paper { padding: 22px 18px; } .paper .two { grid-template-columns: 1fr; } .tablewrap { overflow-x: auto; } }
+footer { margin-top: 30px; color: var(--muted); font-size: 14px; max-width: 75ch; }
+footer a { color: var(--lamp-a); }
+@media (prefers-reduced-motion: reduce) { .bulb { transition: none; } }
+@media print {
+  body { background: #fff; }
+  header, .bar, .note, .grid, .toyes, .paperhead, footer { display: none !important; }
+  .wrap { padding: 0; max-width: none; } .paperwrap { margin: 0; }
+  .paper { box-shadow: none; border-radius: 0; padding: 0; background: #fff; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>AI Agent Check: <span>is this one all right?</span></h1>
+    <p>Tick what one AI agent connects to. You get the three-lamp count, the doors where you can still enforce rules, an answer to "can I have one?", and a one-page brief to keep. Nothing you type leaves this page.</p>
+  </header>
+  <div class="bar">
+    <span class="tag" id="mode"></span>
+    <button type="button" id="blank">Start blank</button>
+    <label class="pick" for="examples">Load an example <select id="examples"></select></label>
+  </div>
+  <p class="note" id="note"></p>
+
+  <div class="grid">
+    <form id="form" autocomplete="off">
+      <section class="step">
+        <h2><span class="n">1</span>Which agent?</h2>
+        <p>One agent at a time. Count per agent, not per tool.</p>
+        <div class="fields">
+          <label class="f" for="name">Agent<input type="text" id="name" placeholder="e.g. Finance team's assistant"></label>
+          <label class="f" for="owner">Named owner (a person)<input type="text" id="owner" placeholder="Nobody yet"></label>
+          <label class="f" for="run">Where it runs<select id="run"></select></label>
+          <label class="f" for="recheck">We look at it again on<input type="date" id="recheck"></label>
+        </div>
+      </section>
+      <section class="step">
+        <h2><span class="n">2</span>What can it reach?</h2>
+        <p>Each connection lights one or more lamps: <b>A</b> untrusted input, <b>B</b> sensitive data, <b>C</b> can act or send.</p>
+        <div class="opts" id="conns"></div>
+      </section>
+      <section class="step">
+        <h2><span class="n">3</span>What's in place?</h2>
+        <p>Be strict. "We meant to" counts as no.</p>
+        <div class="opts" id="ctrls"></div>
+        <div class="fields" style="margin-top:12px">
+          <label class="f" for="logs">Audit log location<select id="logs">
+            <option value="ours">Logs we hold</option>
+            <option value="vendor">Only on the vendor's side</option>
+            <option value="none">None, or we don't know</option>
+          </select></label>
+        </div>
+      </section>
+    </form>
+
+    <aside class="result" aria-live="polite">
+      <h2>The count</h2>
+      <div class="lamps" id="lamps"></div>
+      <div class="verdict" id="risk"></div>
+      <div id="dim"></div>
+      <h3>Where you can still enforce rules</h3>
+      <ul class="plain" id="doors"></ul>
+      <h3>"Can I have one?"</h3>
+      <div class="verdict" id="answer"></div>
+      <div class="reply" id="reply"></div>
+    </aside>
+  </div>
+
+  <section class="toyes" id="toyes" aria-live="polite"></section>
+
+  <div class="paperwrap">
+    <div class="paperhead">
+      <h2>Your one-pager</h2>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <span id="copied" role="status"></span>
+        <button type="button" class="primary" id="copy">Copy as text</button>
+        <button type="button" id="print" hidden>Print</button>
+      </div>
+    </div>
+    <div class="paper" id="paper"></div>
+  </div>
+
+  <footer>
+    <p>A thinking aid from the video "The Assistant Nobody in IT Has Met", current as of November 2026. It is not an assessment of any product, and not legal or compliance advice. The count follows Meta's <a href="https://ai.meta.com/blog/practical-ai-agent-security/">Agents Rule of Two</a>, which builds on Simon Willison's <a href="https://simonwillison.net/2025/Jun/16/the-lethal-trifecta/">lethal trifecta</a>. The call-back rule for bank details follows the UK National Crime Agency's <a href="https://www.nationalcrimeagency.gov.uk/who-we-are/publications/787-invoice-fraud-infosheet/file">invoice fraud guidance</a>.</p>
+  </footer>
+</div>
+
+<script>
+const CONNS = [
+  {id: 'inbox', t: 'Work inbox', l: 'AB', why: 'Anyone can email it; the mailbox holds sensitive material.'},
+  {id: 'send', t: 'Sends email or messages', l: 'C', why: 'A direct way to send things out.'},
+  {id: 'cal', t: 'Calendar', l: 'AB', why: 'Outsiders can put text in invitations; diaries are sensitive.'},
+  {id: 'web', t: 'Browses the web', l: 'AC', why: 'Reads pages anyone can write; a web request can carry data out.'},
+  {id: 'files', t: 'Company files or search', l: 'B', why: 'Whatever the signed-in person can open.'},
+  {id: 'people', t: 'Customer or staff records', l: 'B', why: 'Personal data.'},
+  {id: 'pay', t: 'Payments or finance system', l: 'BC', why: 'Sensitive, and it can change where money goes.'},
+  {id: 'code', t: 'Source code or deployments', l: 'BC', why: 'Secrets live here, and changes ship.'},
+  {id: 'mcpok', t: 'MCP servers on our approved list', l: 'C', why: 'Any tool it calls is also a way out.'},
+  {id: 'mcp3', t: 'An MCP server nobody has vetted', l: 'AC', why: 'Its descriptions and replies are untrusted input; every call sends data to it.'},
+  {id: 'exec', t: 'Runs code on its own computer', l: 'C', why: 'It can do whatever that computer can.'},
+];
+const RUNS = [
+  {id: 'laptop', t: 'A managed company laptop', short: 'a managed company laptop', device: 1, network: 1},
+  {id: 'app', t: "The vendor's app or website", short: "the vendor's app", device: 0, network: 0},
+  {id: 'cloud', t: "Its own computer in the vendor's cloud (always-on)", short: "its own computer in the vendor's cloud", device: 0, network: 0},
+  {id: 'server', t: 'A server or cloud computer we manage', short: 'a server we manage', device: 1, network: 1},
+  {id: 'self', t: 'Self-hosted on a personal machine or server', short: 'a self-hosted machine we do not manage', device: 0, network: 0},
+];
+const CTRLS = [
+  {id: 'plan', t: 'It is on a plan the company controls', s: 'Not a personal account: a contract covers our data, and administrators can see it and switch it off.'},
+  {id: 'narrow', t: 'It has the narrowest access that does the job', s: 'One mailbox, not everything; read-only where that will do.'},
+  {id: 'list', t: 'It connects only to servers on our list', s: 'And a changed tool description gets reviewed again.'},
+  {id: 'human', t: 'A person approves what it sends, pays or changes', s: 'Including edits to records, not only "send" and "pay".'},
+  {id: 'callback', t: 'Bank-detail changes need a call-back', s: 'A person rings a number we already hold before any change.'},
+];
+// The controls behind each term: what to do to turn "not yet" into "yes".
+const CONTROLS = {
+  plan: {h: 'Put it on a plan the company controls', why: 'A personal account has no contract covering your data and no administrator.', c: [
+    'Ask the vendor whether a business or enterprise plan exists for this assistant. Where none does yet, the answer stays "not this one, not yet".',
+    'Check the contract covers your data: where it is kept, who can see it, and whether it trains models.',
+    'Confirm administrators can see the agent, limit what it connects to, and switch it off.',
+    'Until then, stop it being granted access: restrict which third-party apps staff can connect to company accounts in your Google or Microsoft admin console.',
+    'Or bring the job home: run an equivalent agent on a computer you manage.',
+  ]},
+  narrow: {h: 'Cut its access to what the job needs', why: 'The less it can reach, the less a planted instruction can take.', c: [
+    'Write down the job in one sentence, then remove every connection that sentence does not need.',
+    'Scope each connection: one mailbox, folder or project, not everything the person can open.',
+    'Use read-only access wherever reading is enough.',
+    'Where the product allows it, give the agent its own identity with its own permissions instead of the person\'s.',
+    'Keep payments and other money-moving systems out unless moving money is the job.',
+    'Remove connections it has not used when you next review it.',
+  ]},
+  list: {h: 'Connect it only to servers on your list', why: 'Every tool is something the agent reads and a way for data to leave.', c: [
+    'Keep a short approved list of MCP servers and connectors, each with an owner.',
+    'Enforce the list where you can: the agent app\'s admin allowlist, or a gateway all tool traffic passes through.',
+    'For an unvetted server: remove it, or vet it. Who runs it, what does it read, where does the data go, who can change it?',
+    'Treat a changed tool description as a change to the agent\'s instructions and review it again. Ask whether your gateway re-checks descriptions, or only the list.',
+    'Scan agent configurations for risky tool combinations once you have more than a handful.',
+    'Check your suppliers\' admin consoles for MCP servers they now run on your data, and their defaults.',
+  ]},
+  owner: {h: 'Give it an owner and a date', why: 'An approval is a photograph. Someone has to look again.', c: [
+    'Name a person, not a department.',
+    'Set the date you look again: a quarter at most, and whenever its tools change.',
+    'On that date, repeat this count and update "last checked".',
+    'Add agents to the mover and leaver checklist: revoke what the agent was granted, hand it over or shut it down, and check what the shutdown leaves behind.',
+  ]},
+  human: {h: 'Dim a lamp, or put a person in the loop', why: 'With all three lit, one planted instruction can read sensitive data and send it out.', c: [
+    'Dim A: keep unvetted tools and outside content out of the session that holds sensitive data.',
+    'Dim B: narrow what it can see until what is left would not hurt to lose.',
+    'Dim C: sending to new recipients, paying, and changing records each need a person.',
+    'Make approvals cover edits to records, not only "send" and "pay". Approvals guard verbs.',
+    'Prefer boundaries to prompts: a sandbox or an allowed-destinations list means fewer approvals, and each one gets read.',
+  ]},
+  callback: {h: 'Put bank-detail changes behind a call-back', why: 'Changing a record is quieter than making a payment, and just as costly.', c: [
+    'Any change to a supplier\'s bank details needs a person, and a call-back to a number you already hold.',
+    'Give the agent read-only access to supplier records.',
+    'Hold the first payment to changed details for a second approver.',
+    'Agree in advance who rings the bank if money moves: the first hour matters.',
+  ]},
+  logs: {h: 'Get the audit log into your hands', why: 'Not a term for "yes", but without it a bad day cannot be reconstructed.', c: [
+    'Ask the vendor what it records, for how long, and how you get it.',
+    'Where an export exists, send it to your own log store.',
+    'Keep your own logs at the systems the agent touches: your search tool, mail, and payments.',
+  ]},
+};
+const LAMPS = {A: ['Untrusted input', 'It reads things outsiders can write'], B: ['Sensitive data', 'It can reach things that matter'], C: ['Acts or sends', 'It can change things or send them out']};
+// Made-up setups. Each shows how the count changes with the configuration; none describes a product's defaults.
+const EXAMPLES = [
+  {title: "Imogen's assistant (from the video)", name: "Imogen's assistant", owner: '', run: 'cloud', recheck: '', conns: ['inbox', 'cal', 'files', 'pay', 'mcp3'], ctrls: [], logs: 'vendor',
+    note: 'The made-up week from the video: an always-on assistant on a personal plan, signed in as a finance manager, with a currency converter she found online.'},
+  {title: 'OpenClaw on a developer\'s work laptop', name: 'OpenClaw (developer laptop)', owner: '', run: 'laptop', recheck: '', conns: ['web', 'code', 'exec', 'mcp3'], ctrls: [], logs: 'none',
+    note: 'Assumes: a developer installed it themselves on a managed laptop, pointed it at the repositories, and added a community skill nobody reviewed (counted here as an unvetted server).'},
+  {title: 'OpenClaw on a home server, work inbox connected', name: 'OpenClaw (home server)', owner: '', run: 'self', recheck: '', conns: ['inbox', 'cal', 'send', 'web', 'exec'], ctrls: [], logs: 'none',
+    note: 'Assumes: someone runs it on their own machine at home and has signed it in to their work email and calendar. Only the identity door is left.'},
+  {title: 'Grok Bot on a business plan, research only', name: 'Grok Bot (research)', owner: 'Research lead', run: 'cloud', recheck: '+90', conns: ['web', 'exec'], ctrls: ['plan', 'narrow', 'list'], logs: 'ours',
+    note: 'Assumes: a company plan with audit logs exported to us, used to read the public web and draft reports, with no company data connected. Lamp B stays dark.'},
+  {title: 'dots in a company workspace, sales team', name: 'dots (sales team)', owner: 'Head of Sales Ops', run: 'cloud', recheck: '+90', conns: ['inbox', 'cal', 'send', 'people', 'mcpok'], ctrls: ['plan', 'list', 'human'], logs: 'ours',
+    note: 'Assumes: switched on in a company workspace, connected to mail, calendar and the customer system through approved servers, with broad access and a person approving what it sends.'},
+  {title: 'Claude Duet on an executive\'s personal plan', name: 'Claude Duet (executive)', owner: 'The executive', run: 'cloud', recheck: '', conns: ['inbox', 'cal', 'files', 'send'], ctrls: ['human'], logs: 'vendor',
+    note: 'Assumes: a personal subscription signed in to work mail, calendar and files, relying on the product asking before it sends. No company contract covers the data.'},
+  {title: 'Muse on a personal account, marketing', name: 'Muse (marketing)', owner: 'Marketing manager', run: 'cloud', recheck: '', conns: ['web', 'send'], ctrls: ['narrow'], logs: 'vendor',
+    note: 'Assumes: a personal account used to research the public web and send messages, with no company data connected. Lamp B stays dark, so the count is fine; the terms are what fail.'},
+  {title: 'Hermes Agent on a server we run, behind our gateway', name: 'Hermes Agent (internal)', owner: 'Platform team lead', run: 'server', recheck: '+90', conns: ['files', 'code', 'mcpok', 'exec'], ctrls: ['plan', 'narrow', 'list', 'human'], logs: 'ours',
+    note: 'Assumes: self-hosted on our own server, reading internal files and code only, with no inbox or web access. Lamp A stays dark, so nothing outsiders write reaches it.'},
+];
+const BLANK = {name: '', owner: '', run: 'laptop', recheck: '', conns: [], ctrls: [], logs: 'ours'};
+
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
+const today = () => new Date().toLocaleDateString('en-GB', {day: 'numeric', month: 'short', year: 'numeric'});
+const fmtDate = (v) => v ? new Date(v + 'T12:00:00').toLocaleDateString('en-GB', {day: 'numeric', month: 'short', year: 'numeric'}) : '';
+const low = (t) => /^[A-Z]{2}/.test(t) ? t : t.replace(/^An? /, (m) => m.toLowerCase()).replace(/^[A-Z]/, (m) => m.toLowerCase());
+const list = (a) => a.length < 2 ? a.join('') : a.slice(0, -1).join(', ') + ' and ' + a[a.length - 1];
+
+$('run').innerHTML = RUNS.map((r) => `<option value="${r.id}">${esc(r.t)}</option>`).join('');
+$('conns').innerHTML = CONNS.map((c) => `<label class="o" for="c-${c.id}"><input type="checkbox" id="c-${c.id}" data-conn="${c.id}"><span><b>${esc(c.t)}</b><small>${esc(c.why)}</small></span><span class="chips">${[...c.l].map((k) => `<span class="chip ${k}" title="${LAMPS[k][0]}">${k}</span>`).join('')}</span></label>`).join('');
+$('ctrls').innerHTML = CTRLS.map((c) => `<label class="o" for="k-${c.id}"><input type="checkbox" id="k-${c.id}" data-ctrl="${c.id}"><span><b>${esc(c.t)}</b><small>${esc(c.s)}</small></span><span></span></label>`).join('');
+
+const plusDays = (n) => { const d = new Date(Date.now() + n * 864e5); return d.toISOString().slice(0, 10); };
+function load(s, mode) {
+  $('name').value = s.name; $('owner').value = s.owner; $('run').value = s.run; $('recheck').value = s.recheck && s.recheck[0] === '+' ? plusDays(+s.recheck) : s.recheck;
+  $('note').textContent = s.note ? s.note + ' A made-up setup to show the count, not a statement of how the product works by default.' : ''; $('logs').value = s.logs;
+  document.querySelectorAll('[data-conn]').forEach((el) => { el.checked = s.conns.includes(el.dataset.conn); });
+  document.querySelectorAll('[data-ctrl]').forEach((el) => { el.checked = s.ctrls.includes(el.dataset.ctrl); });
+  $('mode').textContent = mode;
+  render();
+}
+function read() {
+  const conns = [...document.querySelectorAll('[data-conn]:checked')].map((el) => el.dataset.conn);
+  const has = (id) => $('k-' + id).checked && (!$('k-' + id).disabled || id === 'plan');
+  return {name: $('name').value.trim(), owner: $('owner').value.trim(), run: $('run').value, recheck: $('recheck').value, logs: $('logs').value, conns, has};
+}
+
+function render() {
+  // An unvetted server contradicts "only servers on our list"; no payments system, no call-back question.
+  const unvetted = $('c-mcp3').checked, pays = $('c-pay').checked;
+  $('k-list').disabled = unvetted; if (unvetted) $('k-list').checked = false;
+  $('k-callback').disabled = !pays; if (!pays) $('k-callback').checked = false;
+  const ours = $('run').value === 'server'; // we run it ourselves, so the plan question answers itself
+  $('k-plan').disabled = ours; if (ours) $('k-plan').checked = true;
+
+  const s = read();
+  const run = RUNS.find((r) => r.id === s.run);
+  const picked = CONNS.filter((c) => s.conns.includes(c.id));
+  const by = {A: [], B: [], C: []};
+  picked.forEach((c) => [...c.l].forEach((k) => by[k].push(low(c.t))));
+  const lit = ['A', 'B', 'C'].filter((k) => by[k].length);
+  const n = lit.length;
+  const agent = s.name || 'This agent';
+
+  $('lamps').innerHTML = ['A', 'B', 'C'].map((k) => `<div class="lamp ${by[k].length ? 'on' : ''}" style="--c:var(--lamp-${k.toLowerCase()})"><div class="bulb">${k}</div><b>${LAMPS[k][0]}</b><small>${LAMPS[k][1]}</small><span class="state">${by[k].length ? 'LIT' : 'DARK'}</span></div>`).join('');
+
+  let risk, riskCol, riskLine;
+  if (!picked.length) { risk = 'Nothing connected yet'; riskCol = 'var(--muted)'; riskLine = 'Tick what it can reach in step 2.'; }
+  else if (n === 3 && s.has('human')) { risk = 'All three lit, with a person in the loop'; riskCol = 'var(--accent)'; riskLine = 'Workable, but approvals wear thin: the twentieth prompt gets less attention than the first. Dimming a lamp is sturdier.'; }
+  else if (n === 3) { risk = 'All three lit, and nothing stands in the way'; riskCol = 'var(--bad)'; riskLine = 'One planted instruction could take sensitive data and send it out, or change a record. Dim a lamp or put a person in the loop.'; }
+  else if (n === 2) { risk = 'Two lit: fine as it stands'; riskCol = 'var(--good)'; riskLine = `Lamp ${['A', 'B', 'C'].find((k) => !by[k].length)} is dark. The next tool someone adds could light it, so count again whenever its tools change.`; }
+  else { risk = 'Low risk as connected'; riskCol = 'var(--good)'; riskLine = 'A good place to start. Count again whenever its tools change.'; }
+  $('risk').style.setProperty('--v', riskCol);
+  $('risk').innerHTML = `<strong>${risk}</strong><span>${riskLine}</span>`;
+
+  if (n === 3) {
+    const cheapest = ['A', 'B', 'C'].reduce((m, k) => by[k].length < by[m].length ? k : m, 'A');
+    const how = {A: 'take it away from', B: 'narrow or remove', C: 'put a person in front of, or remove,'};
+    $('dim').innerHTML = `<h3>Which lamp to dim</h3><ul class="plain">${['A', 'B', 'C'].map((k) => `<li><span class="chip ${k}">${k}</span><span>${k === cheapest ? '<b>Cheapest:</b> ' : ''}${how[k]} ${esc(list(by[k]))}.</span></li>`).join('')}</ul>`;
+  } else $('dim').innerHTML = '';
+
+  const plan = s.has('plan');
+  const doors = [
+    ['Device', run.device, run.device ? 'You manage the machine it runs on.' : 'It does not run on a machine you manage.'],
+    ['Agent app', s.run === 'self' ? 0 : plan ? 1 : 0, s.run === 'self' ? 'Self-hosted: there is no vendor admin console.' : s.run === 'server' ? 'You run it, so its settings are yours.' : plan ? 'A company plan gives you its admin settings.' : 'A personal account has no admin settings for you.'],
+    ['Network', run.network ? 0.5 : 0, run.network ? 'Only if its traffic passes through your gateway.' : 'Its traffic never crosses your network.'],
+    ['Identity', 1, 'It still has to sign in to your systems: control which apps get access, and from which devices.'],
+  ];
+  $('doors').innerHTML = doors.map(([d, v, why]) => `<li><span class="${v === 1 ? 'ok' : v ? 'maybe' : 'no'}">${v === 1 ? '✓' : v ? '?' : '✕'}</span><span><b>${d}.</b> ${why}</span></li>`).join('');
+
+  const miss = [];
+  if (!plan) miss.push(['plan', 'a plan the company controls']);
+  if (!s.has('narrow')) miss.push(['narrow', 'the narrowest access that does the job']);
+  if (!s.has('list')) miss.push(['list', unvetted ? 'only servers on our list (it uses one nobody has vetted)' : 'only servers on our list']);
+  if (!s.owner || !s.recheck) miss.push(['owner', !s.owner && !s.recheck ? 'a named owner and a date we look again' : !s.owner ? 'a named owner' : 'a date we look again']);
+  if (n === 3 && !s.has('human')) miss.push(['human', 'a person in the loop, or one lamp dimmed']);
+  if (pays && !s.has('callback')) miss.push(['callback', 'a call-back before any change of bank details']);
+  const missing = miss.map((m) => m[1]);
+  const yes = picked.length > 0 && missing.length === 0;
+  $('answer').style.setProperty('--v', yes ? 'var(--good)' : 'var(--bad)');
+  $('answer').innerHTML = !picked.length ? '<strong style="color:var(--muted)">No answer yet</strong>' : yes ? '<strong>Yes, on these terms.</strong><span>All in place. Start with low-risk work and widen it as you learn.</span>' : `<strong>Not this one, not yet.</strong><span>Missing:</span><ul class="plain" style="margin-top:6px">${missing.map((m) => `<li><span class="no">✕</span><span>${esc(m)}</span></li>`).join('')}</ul>`;
+  const reply = !picked.length ? 'Tick what it connects to, and a reply you can send appears here.'
+    : yes ? `Yes. ${agent} is on a plan we control, has only the access it needs, connects only to servers on our list, and ${s.owner} owns it. We look at it again on ${fmtDate(s.recheck)}.`
+    : `Not this one, not yet. Before ${agent === 'This agent' ? 'this agent' : agent} goes ahead we need: ${missing.join('; ')}. Once ${missing.length > 1 ? 'those are' : 'that is'} in place, the answer is yes.`;
+  $('reply').textContent = reply;
+
+  // ---- getting to yes ----
+  const fixes = miss.map((m) => m[0]);
+  const soft = picked.length && s.logs !== 'ours' ? ['logs'] : [];
+  const card = (id, cls) => `<div class="card ${cls}"><h3>${CONTROLS[id].h}</h3><p class="why">${CONTROLS[id].why}</p><ul>${CONTROLS[id].c.map((c) => `<li>${esc(c)}</li>`).join('')}</ul></div>`;
+  $('toyes').innerHTML = !picked.length ? '' : yes
+    ? `<h2>Keeping it a yes</h2><p>Every term is in place today. Count again whenever its tools change, and on ${esc(fmtDate(s.recheck))}.</p>${soft.length ? `<div class="cards">${soft.map((id) => card(id, 'soft')).join('')}</div>` : ''}`
+    : `<h2>Getting to yes</h2><p>${fixes.length} ${fixes.length > 1 ? 'terms are' : 'term is'} missing. These are the controls that close each one. Tick the term in step 3 once it is true.</p><div class="cards">${fixes.map((id) => card(id, '')).join('')}${soft.map((id) => card(id, 'soft')).join('')}</div>`;
+
+  // ---- the one-pager ----
+  const d = today();
+  const gap = (t) => `<span class="gap">${t}</span>`;
+  const reach = picked.length ? `Lamps lit: ${lit.join(', ') || 'none'} (${n} of 3). ` + lit.map((k) => `${k}, ${LAMPS[k][0].toLowerCase()}: ${list(by[k])}`).join('. ') + '.' : gap('Not counted yet.');
+  const logs = {ours: 'From logs we hold.', vendor: gap("Only from the vendor's side. Ask what they keep, for how long, and how we get it."), none: gap('We would not. No record is kept, or nobody knows where it is.')}[s.logs];
+  const rows = [
+    ['1. What have we got?', `${esc(agent)}, running on ${run.short}. Connected to: ${picked.length ? esc(list(picked.map((c) => low(c.t)))) : gap('nothing listed')}.`],
+    ['2. Who owns it?', s.owner ? esc(s.owner) : gap('No named owner.')],
+    ['3. What can it reach?', reach + (n === 3 ? (s.has('human') ? ' A person approves what it sends, pays or changes.' : ' ' + gap('Nothing stands between the three.')) : '')],
+    ['4. What happens on a bad day?', 'Steps below.' + (pays ? (s.has('callback') ? ' Bank-detail changes need a call-back.' : ' ' + gap('No call-back rule for bank-detail changes.')) : '')],
+    ['5. How would we know?', logs],
+  ];
+  const bad = [
+    s.run === 'laptop' ? "Cut the agent's access: revoke its tokens and sign the user out." : "Cut the agent's access: revoke its grant in our own admin console and sign the user out everywhere.",
+    'Switch off the tool it was using.', 'Pull the record of what it did.', 'Work out what left, and who to warn.',
+  ];
+  if (pays) bad.push('If money moved, ring the bank within the hour.');
+  $('paper').innerHTML = `
+    <h1>AI agent one-pager: ${esc(agent)}</h1>
+    <div class="meta">Filled in ${d}. Look again: ${s.recheck ? fmtDate(s.recheck) : gap('no date set')}. An approval is a photograph; agents keep changing.</div>
+    <div class="tablewrap"><table><thead><tr><th>Question</th><th>Our answer</th><th>Last checked</th></tr></thead>
+    <tbody>${rows.map(([q, a]) => `<tr><td>${q}</td><td>${a}</td><td>${d}</td></tr>`).join('')}</tbody></table></div>
+    <div class="two">
+      <div><h2>The bad day</h2><ol>${bad.map((b) => `<li>${b}</li>`).join('')}</ol></div>
+      <div><h2>Can they have it?</h2><p style="margin:0;font-size:15px">${esc(reply)}</p>
+      <h2>When the owner moves on</h2><p style="margin:0;font-size:15px">Revoke what the agent was granted, hand it over or shut it down, and check what the shutdown leaves behind.</p></div>
+    </div>
+    ${fixes.length ? `<h2>To get to yes</h2><div id="fixes">${fixes.map((id) => `<div class="fixh">${CONTROLS[id].h}</div><ul class="fix">${CONTROLS[id].c.map((c) => `<li>${esc(c)}</li>`).join('')}</ul>`).join('')}</div>` : ''}`;
+}
+
+function paperText() {
+  const p = $('paper');
+  const lines = [p.querySelector('h1').textContent, p.querySelector('.meta').textContent, ''];
+  p.querySelectorAll('tbody tr').forEach((tr) => { const c = tr.children; lines.push(`${c[0].textContent}\n   ${c[1].textContent}\n   Last checked: ${c[2].textContent}`); });
+  lines.push('', 'THE BAD DAY');
+  p.querySelectorAll('ol li').forEach((li, i) => lines.push(`${i + 1}. ${li.textContent}`));
+  lines.push('', 'CAN THEY HAVE IT?', $('reply').textContent, '', 'WHEN THE OWNER MOVES ON', 'Revoke what the agent was granted, hand it over or shut it down, and check what the shutdown leaves behind.');
+  const fx = p.querySelector('#fixes');
+  if (fx) { lines.push('', 'TO GET TO YES'); [...fx.children].forEach((el) => { if (el.className === 'fixh') lines.push('', el.textContent); else el.querySelectorAll('li').forEach((li) => lines.push('- ' + li.textContent)); }); }
+  return lines.join('\n');
+}
+
+$('form').addEventListener('input', () => { $('mode').textContent = 'Your agent'; $('note').textContent = ''; $('examples').value = ''; render(); });
+$('form').addEventListener('submit', (e) => e.preventDefault());
+$('examples').innerHTML = '<option value="">Choose…</option>' + EXAMPLES.map((e, i) => `<option value="${i}">${esc(e.title)}</option>`).join('');
+const loadEx = (i) => { load(EXAMPLES[i], 'Example'); $('examples').value = String(i); };
+$('blank').addEventListener('click', () => { load(BLANK, 'Your agent'); $('examples').value = ''; });
+$('examples').addEventListener('change', (e) => { if (e.target.value !== '') loadEx(+e.target.value); });
+$('copy').addEventListener('click', async () => {
+  try { await navigator.clipboard.writeText(paperText()); $('copied').textContent = 'Copied.'; }
+  catch (e) { $('copied').textContent = 'Copy was blocked: select the page text instead.'; }
+  setTimeout(() => { $('copied').textContent = ''; }, 4000);
+});
+// Printing works on a normal web page; inside an embedded viewer it is blocked, so the button stays hidden there.
+let framed = true; try { framed = window.self !== window.top; } catch (e) {}
+if (!framed) { $('print').hidden = false; $('print').addEventListener('click', () => window.print()); }
+
+loadEx(0);
+</script>
+</body>
+</html>
