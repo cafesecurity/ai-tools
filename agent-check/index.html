@@ -93,6 +93,7 @@ label.o small { display: block; color: var(--muted); font-size: 14px; }
 .result h2 { font-size: 15px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 0 0 14px; }
 .lamps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px; }
 .lamp { text-align: center; }
+.factnote { margin: 0 0 14px; font-size: 14px; color: var(--muted); }
 .bulb {
   width: min(118px, 100%); aspect-ratio: 1; border-radius: 50%; margin: 0 auto 10px; display: grid; place-items: center;
   font-size: 16px; line-height: 1.15; font-weight: 700; text-align: center; padding: 8px; text-wrap: balance;
@@ -214,10 +215,10 @@ footer a { color: var(--lamp-a); }
       </section>
       <section class="step">
         <h2><span class="n">2</span>What can it reach?</h2>
-        <p>Each connection lights one or more of three lamps: <span class="chip A">Untrusted input</span> <span class="chip B">Sensitive data</span> <span class="chip C">Acts or sends</span></p>
+        <p>Each connection adds one or more of three risk factors: <span class="chip A">Untrusted input</span> <span class="chip B">Sensitive data</span> <span class="chip C">Acts or sends</span></p>
         <div class="opts" id="conns"></div>
         <h3 class="srvh">Common MCP servers</h3>
-        <p class="disclaimer" id="srvnote"><b>Checked against each vendor's own documentation on 11 November 2026.</b> Servers add and change tools often, so check the current docs before you rely on this. The lamps show what a server can do depending on how it is set up; they are not a security rating or a verdict on the product. This tool tests nothing and does not make any agent safe: securing your systems stays your responsibility.</p>
+        <p class="disclaimer" id="srvnote"><b>Checked against each vendor's own documentation on 11 November 2026.</b> Servers add and change tools often, so check the current docs before you rely on this. The risk factors show what a server can do depending on how it is set up; they are not a security rating or a verdict on the product. This tool tests nothing and does not make any agent safe: securing your systems stays your responsibility.</p>
         <div class="opts" id="servers"></div>
       </section>
       <section class="step">
@@ -239,8 +240,9 @@ footer a { color: var(--lamp-a); }
     </form>
 
     <aside class="result" aria-live="polite">
-      <h2>The count</h2>
+      <h2>Risk factors</h2>
       <div class="lamps" id="lamps"></div>
+      <p class="factnote">Any two can be managed. All three together let one planted instruction read sensitive data and send it out. (The video shows these as three lamps.)</p>
       <div class="verdict" id="risk"></div>
       <div id="dim"></div>
       <h3>Where you can still enforce rules</h3>
@@ -267,7 +269,7 @@ footer a { color: var(--lamp-a); }
 
   <footer>
     <p><b>Use at your own risk.</b> Provided as is, with no warranty. Products, settings and MCP servers change quickly; the server details were checked against vendors' documentation on 11 November 2026 and may be out of date or incomplete. Nothing here is a security assessment, a guarantee or professional advice, and responsibility for securing your systems and data stays with you and your organisation.</p>
-    <p>A thinking aid from the video <a href="https://youtu.be/QffClw8TdN4">Securing AI Agents at Work</a>, current as of November 2026. It is not an assessment of any product, and not legal or compliance advice. The count follows Meta's <a href="https://ai.meta.com/blog/practical-ai-agent-security/">Agents Rule of Two</a>, which builds on Simon Willison's <a href="https://simonwillison.net/2025/Jun/16/the-lethal-trifecta/">lethal trifecta</a>. The call-back rule for bank details follows the UK National Crime Agency's <a href="https://www.nationalcrimeagency.gov.uk/who-we-are/publications/787-invoice-fraud-infosheet/file">invoice fraud guidance</a>.</p>
+    <p>A thinking aid from the video <a href="https://youtu.be/QffClw8TdN4">Securing AI Agents at Work</a>, current as of November 2026. It is not an assessment of any product, and not legal or compliance advice. The three risk factors follow Meta's <a href="https://ai.meta.com/blog/practical-ai-agent-security/">Agents Rule of Two</a>, which builds on Simon Willison's <a href="https://simonwillison.net/2025/Jun/16/the-lethal-trifecta/">lethal trifecta</a>. The call-back rule for bank details follows the UK National Crime Agency's <a href="https://www.nationalcrimeagency.gov.uk/who-we-are/publications/787-invoice-fraud-infosheet/file">invoice fraud guidance</a>.</p>
   </footer>
 </div>
 
@@ -330,10 +332,10 @@ const CONTROLS = {
     'On that date, repeat this count and update "last checked".',
     'Add agents to the mover and leaver checklist: revoke what the agent was granted, hand it over or shut it down, and check what the shutdown leaves behind.',
   ]},
-  human: {g: 'tech', h: 'Dim a lamp, or put a person in the loop', why: 'With all three lit, one planted instruction can read sensitive data and send it out.', c: [
-    'Dim untrusted input: keep unvetted tools and outside content out of the session that holds sensitive data.',
-    'Dim sensitive data: narrow what it can see until what is left would not hurt to lose.',
-    'Dim acts or sends: sending to new recipients, paying, and changing records each need a person.',
+  human: {g: 'tech', h: 'Remove one risk factor, or require human approval', why: 'With all three risk factors present, one planted instruction can read sensitive data and send it out.', c: [
+    'Remove untrusted input: keep unvetted tools and outside content out of the session that holds sensitive data.',
+    'Limit data access: narrow what it can see until what is left would not hurt to lose.',
+    'Restrict actions: sending to new recipients, paying, and changing records each need a person.',
     'Make approvals cover edits to records, not only "send" and "pay". Approvals guard verbs.',
     'Prefer boundaries to prompts: a sandbox or an allowed-destinations list means fewer approvals, and each one gets read.',
   ]},
@@ -466,15 +468,15 @@ const EXAMPLES = [
   {title: 'OpenClaw on a home server, work inbox connected', agent: 'openclaw', name: 'OpenClaw (home server)', owner: '', run: 'self', recheck: '', conns: ['inbox', 'cal', 'send', 'web', 'exec'], ctrls: [], logs: 'none',
     note: 'Assumes: someone runs it on their own machine at home and has signed it in to their work email and calendar. Only the identity door is left.'},
   {title: 'Grok Bot on a business plan, research only', agent: 'grok', name: 'Grok Bot (research)', owner: 'Research lead', run: 'cloud', recheck: '+90', conns: ['web', 'exec'], ctrls: ['plan', 'narrow', 'list'], logs: 'ours',
-    note: 'Assumes: a company plan with audit logs exported to us, used to read the public web and draft reports, with no company data connected. The sensitive-data lamp stays dark.'},
+    note: 'Assumes: a company plan with audit logs exported to us, used to read the public web and draft reports, with no company data connected. No sensitive data in reach.'},
   {title: 'dots in a company workspace, sales team', agent: 'dots', name: 'dots (sales team)', owner: 'Head of Sales Ops', run: 'cloud', recheck: '+90', conns: ['inbox', 'cal', 'send', 'people', 'mcpok'], ctrls: ['plan', 'list', 'human'], logs: 'ours',
     note: 'Assumes: switched on in a company workspace, connected to mail, calendar and the customer system through approved servers, with broad access and a person approving what it sends.'},
   {title: 'Claude Duet on an executive\'s personal plan', agent: 'duet', name: 'Claude Duet (executive)', owner: 'The executive', run: 'cloud', recheck: '', conns: ['inbox', 'cal', 'files', 'send'], ctrls: ['human'], logs: 'vendor',
     note: 'Assumes: a personal subscription signed in to work mail, calendar and files, relying on the product asking before it sends. No company contract covers the data.'},
   {title: 'Muse on a personal account, marketing', agent: 'muse', name: 'Muse (marketing)', owner: 'Marketing manager', run: 'cloud', recheck: '', conns: ['web', 'send'], ctrls: ['narrow'], logs: 'vendor',
-    note: 'Assumes: a personal account used to research the public web and send messages, with no company data connected. The sensitive-data lamp stays dark, so the count is fine; the terms are what fail.'},
+    note: 'Assumes: a personal account used to research the public web and send messages, with no company data connected. No sensitive data in reach, so the risk is acceptable; the terms are what fail.'},
   {title: 'Hermes Agent on a server we run, behind our gateway', agent: 'hermes', name: 'Hermes Agent (internal)', owner: 'Platform team lead', run: 'server', recheck: '+90', conns: ['files', 'code', 'mcpok', 'exec'], ctrls: ['plan', 'narrow', 'list', 'human'], logs: 'ours',
-    note: 'Assumes: self-hosted on our own server, reading internal files and code only, with no inbox or web access. The untrusted-input lamp stays dark, so nothing outsiders write reaches it.'},
+    note: 'Assumes: self-hosted on our own server, reading internal files and code only, with no inbox or web access. No untrusted input, so nothing outsiders write reaches it.'},
 ];
 const BLANK = {agent: 'custom', name: '', owner: '', run: 'laptop', recheck: '', conns: [], ctrls: [], logs: 'ours'};
 
@@ -499,7 +501,7 @@ function showAgent() {
 const chipsFor = (l) => [...l].map((k) => `<span class="chip ${k}" title="${LAMPS[k][0]}">${LAMPS[k][2]}</span>`).join('');
 $('servers').innerHTML = SERVERS.map((v) => {
   const all = [...new Set((v.base + v.opts.map((o) => o.l).join('')).split(''))].sort().join('');
-  return `<div class="srv"><label class="o" for="s-${v.id}"><input type="checkbox" id="s-${v.id}" data-srv="${v.id}"><span><b>${esc(v.name)}</b><small>${esc(v.what)}</small></span><span class="chips" title="Lamps it can light">${chipsFor(all)}</span></label>
+  return `<div class="srv"><label class="o" for="s-${v.id}"><input type="checkbox" id="s-${v.id}" data-srv="${v.id}"><span><b>${esc(v.name)}</b><small>${esc(v.what)}</small></span><span class="chips" title="Risk factors it can add">${chipsFor(all)}</span></label>
     <div class="srvbody">
       ${v.opts.map((o) => `<label class="srvopt" for="so-${v.id}-${o.id}"><input type="checkbox" id="so-${v.id}-${o.id}" data-srvopt="${v.id}" data-opt="${o.id}"><span>${esc(o.t)}</span><span class="chips">${chipsFor(o.l)}</span></label>`).join('')}
       ${v.base ? `<div class="srvmeta"><b>Always:</b> ${[...v.base].map((k) => LAMPS[k][0].toLowerCase()).join(' and ')}.</div>` : ''}
@@ -515,7 +517,7 @@ $('ctrls-tech').innerHTML = CTRLS.filter((c) => c.g === 'tech').map(ctrlHtml).jo
 const plusDays = (n) => { const d = new Date(Date.now() + n * 864e5); return d.toISOString().slice(0, 10); };
 function load(s, mode) {
   $('name').value = s.name; $('owner').value = s.owner; $('run').value = s.run; $('recheck').value = s.recheck && s.recheck[0] === '+' ? plusDays(+s.recheck) : s.recheck;
-  $('note').textContent = s.note ? s.note + ' A made-up setup to show the count, not a statement of how the product works by default.' : ''; $('logs').value = s.logs;
+  $('note').textContent = s.note ? s.note + ' A made-up setup to show the risk assessment, not a statement of how the product works by default.' : ''; $('logs').value = s.logs;
   document.querySelectorAll('[data-conn]').forEach((el) => { el.checked = s.conns.includes(el.dataset.conn); });
   document.querySelectorAll('[data-ctrl]').forEach((el) => { el.checked = s.ctrls.includes(el.dataset.ctrl); });
   const ag = $('a-' + (s.agent || 'custom')); if (ag) ag.checked = true;
@@ -559,21 +561,21 @@ function render() {
   const n = lit.length;
   const agent = s.name || 'This agent';
 
-  $('lamps').innerHTML = ['A', 'B', 'C'].map((k) => `<div class="lamp ${by[k].length ? 'on' : ''}" style="--c:var(--lamp-${k.toLowerCase()})"><div class="bulb">${LAMPS[k][0]}</div><small>${LAMPS[k][1]}</small><span class="state">${by[k].length ? 'LIT' : 'DARK'}</span></div>`).join('');
+  $('lamps').innerHTML = ['A', 'B', 'C'].map((k) => `<div class="lamp ${by[k].length ? 'on' : ''}" style="--c:var(--lamp-${k.toLowerCase()})"><div class="bulb">${LAMPS[k][0]}</div><small>${LAMPS[k][1]}</small><span class="state">${by[k].length ? 'PRESENT' : 'ABSENT'}</span></div>`).join('');
 
   let risk, riskCol, riskLine;
   if (!picked.length) { risk = 'Nothing connected yet'; riskCol = 'var(--muted)'; riskLine = 'Tick what it can reach in step 2.'; }
-  else if (n === 3 && s.has('human')) { risk = 'All three lit, with a person in the loop'; riskCol = 'var(--accent)'; riskLine = 'Workable, but approvals wear thin: the twentieth prompt gets less attention than the first. Dimming a lamp is sturdier.'; }
-  else if (n === 3) { risk = 'All three lit, and nothing stands in the way'; riskCol = 'var(--bad)'; riskLine = 'One planted instruction could take sensitive data and send it out, or change a record. Dim a lamp or put a person in the loop.'; }
-  else if (n === 2) { risk = 'Two lit: fine as it stands'; riskCol = 'var(--good)'; riskLine = `The ${LAMPS[['A', 'B', 'C'].find((k) => !by[k].length)][0].toLowerCase()} lamp is dark. The next tool someone adds could light it, so count again whenever its tools change.`; }
-  else { risk = 'Low risk as connected'; riskCol = 'var(--good)'; riskLine = 'A good place to start. Count again whenever its tools change.'; }
+  else if (n === 3 && s.has('human')) { risk = 'All three present, mitigated by human approval'; riskCol = 'var(--accent)'; riskLine = 'Workable, but approvals wear thin: the twentieth prompt gets less attention than the first. Removing one factor is sturdier.'; }
+  else if (n === 3) { risk = 'All three present, with no mitigating control'; riskCol = 'var(--bad)'; riskLine = 'One planted instruction could take sensitive data and send it out, or change a record. Remove one factor, or require human approval.'; }
+  else if (n === 2) { risk = 'Two of three present: acceptable as configured'; riskCol = 'var(--good)'; riskLine = `No ${LAMPS[['A', 'B', 'C'].find((k) => !by[k].length)][0].toLowerCase()} factor. The next tool someone adds could introduce it, so reassess whenever its tools change.`; }
+  else { risk = 'Low risk as connected'; riskCol = 'var(--good)'; riskLine = 'A good place to start. Reassess whenever its tools change.'; }
   $('risk').style.setProperty('--v', riskCol);
   $('risk').innerHTML = `<strong>${risk}</strong><span>${riskLine}</span>`;
 
   if (n === 3) {
-    const cheapest = ['A', 'B', 'C'].reduce((m, k) => by[k].length < by[m].length ? k : m, 'A');
-    const how = {A: 'take it away from', B: 'narrow or remove', C: 'put a person in front of, or remove,'};
-    $('dim').innerHTML = `<h3>Which lamp to dim</h3><ul class="plain">${['A', 'B', 'C'].map((k) => `<li style="grid-template-columns:auto 1fr"><span class="chip ${k}">${LAMPS[k][2]}</span><span>${k === cheapest ? '<b>Cheapest:</b> ' : ''}${how[k]} ${esc(list(by[k]))}.</span></li>`).join('')}</ul>`;
+    const easiest = ['A', 'B', 'C'].reduce((m, k) => by[k].length < by[m].length ? k : m, 'A');
+    const how = {A: 'Remove untrusted input: take it away from', B: 'Limit data access: narrow or remove', C: 'Restrict actions: require approval for, or remove,'};
+    $('dim').innerHTML = `<h3>Mitigation: remove one risk factor</h3><ul class="plain">${['A', 'B', 'C'].map((k) => `<li style="grid-template-columns:auto 1fr"><span class="chip ${k}">${LAMPS[k][2]}</span><span>${k === easiest ? '<b>Least disruptive.</b> ' : ''}${how[k]} ${esc(list(by[k]))}.</span></li>`).join('')}</ul>`;
   } else $('dim').innerHTML = '';
 
   const plan = s.has('plan');
@@ -590,7 +592,7 @@ function render() {
   if (!s.has('narrow')) miss.push(['narrow', 'the narrowest access that does the job']);
   if (!s.has('list')) miss.push(['list', unvetted ? 'only servers on our list (it uses one nobody has vetted)' : 'only servers on our list']);
   if (!s.owner || !s.recheck) miss.push(['owner', !s.owner && !s.recheck ? 'a named owner and a date we look again' : !s.owner ? 'a named owner' : 'a date we look again']);
-  if (n === 3 && !s.has('human')) miss.push(['human', 'a person in the loop, or one lamp dimmed']);
+  if (n === 3 && !s.has('human')) miss.push(['human', 'human approval, or one risk factor removed']);
   if (pays && !s.has('callback')) miss.push(['callback', 'a call-back before any change of bank details']);
   const missing = miss.map((m) => m[1]);
   const yes = picked.length > 0 && missing.length === 0;
@@ -612,12 +614,12 @@ function render() {
   // ---- the one-pager ----
   const d = today();
   const gap = (t) => `<span class="gap">${t}</span>`;
-  const reach = picked.length ? `Lamps lit: ${n} of 3. ` + lit.map((k) => `${LAMPS[k][0]}: ${list(by[k])}`).join('. ') + '.' : gap('Not counted yet.');
+  const reach = picked.length ? `Risk factors present: ${n} of 3. ` + lit.map((k) => `${LAMPS[k][0]}: ${list(by[k])}`).join('. ') + '.' : gap('Not counted yet.');
   const logs = {ours: 'From logs we hold.', vendor: gap("Only from the vendor's side. Ask what they keep, for how long, and how we get it."), none: gap('We would not. No record is kept, or nobody knows where it is.')}[s.logs];
   const rows = [
     ['1. What have we got?', `${esc(agent)}, running on ${run.short}. Connected to: ${picked.length ? esc(list(picked.map((c) => c.t))) : gap('nothing listed')}.`],
     ['2. Who owns it?', s.owner ? esc(s.owner) : gap('No named owner.')],
-    ['3. What can it reach?', reach + (n === 3 ? (s.has('human') ? ' A person approves what it sends, pays or changes.' : ' ' + gap('Nothing stands between the three.')) : '')],
+    ['3. What can it reach?', reach + (n === 3 ? (s.has('human') ? ' A person approves what it sends, pays or changes.' : ' ' + gap('No mitigating control.')) : '')],
     ['4. What happens on a bad day?', 'Steps below.' + (pays ? (s.has('callback') ? ' Bank-detail changes need a call-back.' : ' ' + gap('No call-back rule for bank-detail changes.')) : '')],
     ['5. How would we know?', logs],
   ];
