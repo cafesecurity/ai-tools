@@ -190,7 +190,7 @@ footer a { color: var(--lamp-a); }
       <li>Tick what it can reach.</li>
       <li>Tick the controls already in place.</li>
     </ol>
-    <p>You'll see which of the three risks it has, where you can still enforce rules, an approval decision with any conditions not yet met, and a one-page summary to keep. Nothing you enter leaves this page.</p>
+    <p>You'll see which of the three risks it has, where you can still enforce rules, an approval decision with any conditions not yet met, and an approval record to keep. Nothing you enter leaves this page.</p>
   </header>
   <div class="bar">
     <span class="tag" id="mode"></span>
@@ -210,7 +210,7 @@ footer a { color: var(--lamp-a); }
           <label class="f" for="name">Agent<input type="text" id="name" placeholder="e.g. Finance team's assistant"></label>
           <label class="f" for="owner">Named owner (a person)<input type="text" id="owner" placeholder="Nobody yet"></label>
           <label class="f" for="run">Where it runs<select id="run"></select></label>
-          <label class="f" for="recheck">We look at it again on<input type="date" id="recheck"></label>
+          <label class="f" for="recheck">Next review date<input type="date" id="recheck"></label>
         </div>
       </section>
       <section class="step">
@@ -257,7 +257,7 @@ footer a { color: var(--lamp-a); }
 
   <div class="paperwrap">
     <div class="paperhead">
-      <h2>Your one-pager</h2>
+      <h2>Agent approval record</h2>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <span id="copied" role="status"></span>
         <button type="button" class="primary" id="copy">Copy as text</button>
@@ -591,7 +591,7 @@ function render() {
   if (!plan) miss.push(['plan', noPlan ? `a plan the company controls (${A.name} has none: ${A.planNote}, as of November 2026)` : 'a plan the company controls']);
   if (!s.has('narrow')) miss.push(['narrow', 'the narrowest access that does the job']);
   if (!s.has('list')) miss.push(['list', unvetted ? 'only servers on our list (it uses one nobody has vetted)' : 'only servers on our list']);
-  if (!s.owner || !s.recheck) miss.push(['owner', !s.owner && !s.recheck ? 'a named owner and a date we look again' : !s.owner ? 'a named owner' : 'a date we look again']);
+  if (!s.owner || !s.recheck) miss.push(['owner', !s.owner && !s.recheck ? 'a named owner and a review date' : !s.owner ? 'a named owner' : 'a review date']);
   if (n === 3 && !s.has('human')) miss.push(['human', 'human approval, or one risk factor removed']);
   if (pays && !s.has('callback')) miss.push(['callback', 'out-of-band verification of payment-detail changes']);
   const missing = miss.map((m) => m[1]);
@@ -599,7 +599,7 @@ function render() {
   $('answer').style.setProperty('--v', yes ? 'var(--good)' : 'var(--bad)');
   $('answer').innerHTML = !picked.length ? '<strong style="color:var(--muted)">No decision yet</strong>' : yes ? '<strong>Approved, with conditions.</strong><span>All conditions are met. Start with low-risk work and widen its use as you learn.</span>' : `<strong>Not approved yet.</strong><span>Conditions not met:</span><ul class="plain" style="margin-top:6px">${missing.map((m) => `<li><span class="no">✕</span><span>${esc(m)}</span></li>`).join('')}</ul>`;
   const reply = !picked.length ? 'Tick what it connects to, and a reply you can send to whoever asked appears here.'
-    : yes ? `Approved. ${agent} is on a plan we control, has only the access it needs, connects only to servers on our list, and ${s.owner} owns it. We look at it again on ${fmtDate(s.recheck)}.`
+    : yes ? `Approved. ${agent} is on a plan we control, has only the access it needs, connects only to servers on our list, and ${s.owner} owns it. Next review: ${fmtDate(s.recheck)}.`
     : `Not approved yet. Before ${agent === 'This agent' ? 'this agent' : agent} can go ahead, we need: ${missing.join('; ')}. Once ${missing.length > 1 ? 'these are' : 'this is'} in place, we can approve it.`;
   $('reply').textContent = reply;
 
@@ -611,45 +611,45 @@ function render() {
     ? `<h2>Keeping it approved</h2><p>Every condition is met today. Count again whenever its tools change, and on ${esc(fmtDate(s.recheck))}.</p>${soft.length ? `<div class="cards">${soft.map((id) => card(id, 'soft')).join('')}</div>` : ''}`
     : `<h2>Getting to yes</h2><p>${fixes.length} ${fixes.length > 1 ? 'conditions are' : 'condition is'} not met yet. These are the controls that meet each one. Tick it in step 3 once it is true.</p><div class="cards">${fixes.map((id) => card(id, '')).join('')}${soft.map((id) => card(id, 'soft')).join('')}</div>`;
 
-  // ---- the one-pager ----
+  // ---- the approval record ----
   const d = today();
   const gap = (t) => `<span class="gap">${t}</span>`;
   const reach = picked.length ? `Risk factors present: ${n} of 3. ` + lit.map((k) => `${LAMPS[k][0]}: ${list(by[k])}`).join('. ') + '.' : gap('Not counted yet.');
-  const logs = {ours: 'From logs we hold.', vendor: gap("Only from the vendor's side. Ask what they keep, for how long, and how we get it."), none: gap('We would not. No record is kept, or nobody knows where it is.')}[s.logs];
+  const logs = {ours: 'Audit logs are held by us.', vendor: gap('Audit logs are held only by the vendor. Confirm what is kept, for how long, and how we access it.'), none: gap('No audit log, or its location is unknown.')}[s.logs];
   const rows = [
-    ['1. What have we got?', `${esc(agent)}, running on ${run.short}. Connected to: ${picked.length ? esc(list(picked.map((c) => c.t))) : gap('nothing listed')}.`],
-    ['2. Who owns it?', s.owner ? esc(s.owner) : gap('No named owner.')],
-    ['3. What can it reach?', reach + (n === 3 ? (s.has('human') ? ' A person approves what it sends, pays or changes.' : ' ' + gap('No mitigating control.')) : '')],
-    ['4. What happens on a bad day?', 'Steps below.' + (pays ? (s.has('callback') ? ' Payment-detail changes are verified out of band.' : ' ' + gap('No out-of-band verification of payment-detail changes.')) : '')],
-    ['5. How would we know?', logs],
+    ['Agent and scope', `${esc(agent)}, running on ${run.short}. Connected to: ${picked.length ? esc(list(picked.map((c) => c.t))) : gap('nothing listed')}.`],
+    ['Business owner', s.owner ? esc(s.owner) : gap('No named owner.')],
+    ['Risk assessment', reach + (n === 3 ? (s.has('human') ? ' Mitigated by human approval of what it sends, pays or changes.' : ' ' + gap('No mitigating control.')) : '')],
+    ['Incident response', 'See the response steps below.' + (pays ? (s.has('callback') ? ' Payment-detail changes are verified out of band.' : ' ' + gap('No out-of-band verification of payment-detail changes.')) : '')],
+    ['Monitoring and audit', logs],
   ];
   const bad = [
-    s.run === 'laptop' ? "Cut the agent's access: revoke its tokens and sign the user out." : "Cut the agent's access: revoke its grant in our own admin console and sign the user out everywhere.",
-    'Switch off the tool it was using.', 'Pull the record of what it did.', 'Work out what left, and who to warn.',
+    s.run === 'laptop' ? "Revoke the agent's access: its tokens, and the user's active sessions." : "Revoke the agent's access in our own admin console, and end the user's active sessions.",
+    'Disable the tool or server it was using.', 'Preserve the record of its actions.', 'Establish what data left, and who must be notified.',
   ];
-  if (pays) bad.push('If money moved, ring the bank within the hour.');
+  if (pays) bad.push('If funds were transferred, contact the bank within the hour.');
   $('paper').innerHTML = `
-    <h1>AI agent one-pager: ${esc(agent)}</h1>
-    <div class="meta">Filled in ${d}. Look again: ${s.recheck ? fmtDate(s.recheck) : gap('no date set')}. An approval is a photograph; agents keep changing.</div>
-    <div class="tablewrap"><table><thead><tr><th>Question</th><th>Our answer</th><th>Last checked</th></tr></thead>
+    <h1>AI agent approval record: ${esc(agent)}</h1>
+    <div class="meta">Prepared ${d} · Next review: ${s.recheck ? fmtDate(s.recheck) : gap('not set')} · This reflects the setup on the date above. Review it whenever the agent's tools or access change.</div>
+    <div class="tablewrap"><table><thead><tr><th>Area</th><th>Current position</th><th>Last reviewed</th></tr></thead>
     <tbody>${rows.map(([q, a]) => `<tr><td>${q}</td><td>${a}</td><td>${d}</td></tr>`).join('')}</tbody></table></div>
     <div class="two">
-      <div><h2>The bad day</h2><ol>${bad.map((b) => `<li>${b}</li>`).join('')}</ol></div>
+      <div><h2>Incident response</h2><ol>${bad.map((b) => `<li>${b}</li>`).join('')}</ol></div>
       <div><h2>Approval decision</h2><p style="margin:0;font-size:15px">${esc(reply)}</p>
-      <h2>When the owner moves on</h2><p style="margin:0;font-size:15px">Revoke what the agent was granted, hand it over or shut it down, and check what the shutdown leaves behind.</p></div>
+      <h2>Change of owner</h2><p style="margin:0;font-size:15px">Revoke the agent's access, transfer ownership or decommission it, and confirm nothing is left running or signed in.</p></div>
     </div>
-    ${fixes.length ? `<h2>To get to yes</h2><div id="fixes">${fixes.map((id) => `<div class="fixh">${CONTROLS[id].h}</div><ul class="fix">${CONTROLS[id].c.map((c) => `<li>${esc(c)}</li>`).join('')}</ul>`).join('')}</div>` : ''}`;
+    ${fixes.length ? `<h2>Actions required for approval</h2><div id="fixes">${fixes.map((id) => `<div class="fixh">${CONTROLS[id].h}</div><ul class="fix">${CONTROLS[id].c.map((c) => `<li>${esc(c)}</li>`).join('')}</ul>`).join('')}</div>` : ''}`;
 }
 
 function paperText() {
   const p = $('paper');
   const lines = [p.querySelector('h1').textContent, p.querySelector('.meta').textContent, ''];
-  p.querySelectorAll('tbody tr').forEach((tr) => { const c = tr.children; lines.push(`${c[0].textContent}\n   ${c[1].textContent}\n   Last checked: ${c[2].textContent}`); });
-  lines.push('', 'THE BAD DAY');
+  p.querySelectorAll('tbody tr').forEach((tr) => { const c = tr.children; lines.push(`${c[0].textContent}\n   ${c[1].textContent}\n   Last reviewed: ${c[2].textContent}`); });
+  lines.push('', 'INCIDENT RESPONSE');
   p.querySelectorAll('ol li').forEach((li, i) => lines.push(`${i + 1}. ${li.textContent}`));
-  lines.push('', 'APPROVAL DECISION', $('reply').textContent, '', 'WHEN THE OWNER MOVES ON', 'Revoke what the agent was granted, hand it over or shut it down, and check what the shutdown leaves behind.');
+  lines.push('', 'APPROVAL DECISION', $('reply').textContent, '', 'CHANGE OF OWNER', "Revoke the agent's access, transfer ownership or decommission it, and confirm nothing is left running or signed in.");
   const fx = p.querySelector('#fixes');
-  if (fx) { lines.push('', 'TO GET TO YES'); [...fx.children].forEach((el) => { if (el.className === 'fixh') lines.push('', el.textContent); else el.querySelectorAll('li').forEach((li) => lines.push('- ' + li.textContent)); }); }
+  if (fx) { lines.push('', 'ACTIONS REQUIRED FOR APPROVAL'); [...fx.children].forEach((el) => { if (el.className === 'fixh') lines.push('', el.textContent); else el.querySelectorAll('li').forEach((li) => lines.push('- ' + li.textContent)); }); }
   return lines.join('\n');
 }
 

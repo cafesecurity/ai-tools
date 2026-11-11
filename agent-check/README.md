@@ -8,7 +8,7 @@ A one-page tool for whoever sets the rules for other people's AI agents. Open `i
 - **The doors:** where you can still enforce rules (device, agent app, network, identity), given where the agent runs.
 - **Approval decision:** approved with conditions, or not approved yet with the conditions still missing, plus a reply you can send to whoever asked.
 - **Getting to yes:** the controls that close each missing term. The full list is in [CONTROLS.md](CONTROLS.md).
-- **A one-pager:** five questions with a "last checked" date, the bad-day steps, and what is left to fix. Copy it as text or print it.
+- **An approval record:** scope, owner, risk assessment, incident response and audit, each with a "last reviewed" date, plus the decision and the actions required for approval. Copy it as text or print it.
 
 It is a single self-contained file. Nothing you type leaves the page: there is no server, no analytics and no storage.
 
