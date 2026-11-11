@@ -12,7 +12,7 @@ A one-page tool for whoever sets the rules for other people's AI agents. Open `i
 
 It is a single self-contained file. Nothing you type leaves the page: there is no server, no analytics and no storage.
 
-Eight made-up example setups are built in (an always-on assistant from the video, OpenClaw, Grok Bot, dots, Claude Duet, Muse and Hermes Agent in different configurations). They show how the count changes with the configuration; none describes how a product works by default.
+Eleven made-up example setups are built in, a risky and a safer configuration for finance, development, sales and operations, marketing and executive use (plus the always-on assistant from the video). They show how the count changes with the configuration; none describes how a product works by default.
 
 From the video ["Securing AI Agents at Work"](https://youtu.be/QffClw8TdN4). Current as of November 2026. A thinking aid, not an assessment of any product, and not legal or compliance advice.
 
