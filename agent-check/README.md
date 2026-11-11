@@ -3,10 +3,10 @@
 A one-page tool for whoever sets the rules for other people's AI agents. Open `index.html` in a browser, tick what one agent connects to, and you get:
 
 - **Risk factors:** untrusted input, sensitive data, and the ability to act or send data out (the video shows them as three lamps). Any two can be managed; all three need human approval or one factor removed.
-- **Which agent:** pick Grok Bot, dots, Claude Duet, Muse, OpenClaw, Hermes Agent or a custom agent. Each shows key facts as of November 2026, whether a company-controlled plan exists, the settings that help, and a link to current docs. Where no company plan exists, "can I have one?" says so.
+- **Which agent:** pick Grok Bot, dots, Claude Duet, Muse, OpenClaw, Hermes Agent or a custom agent. Each shows key facts as of November 2026, whether a company-controlled plan exists, the settings that help, and a link to current docs. Where no company plan exists, the approval decision says so.
 - **Common MCP servers:** ten popular servers (GitHub, Slack, Google Drive, Notion, Jira and Confluence, Salesforce, Asana, Supabase, a Playwright browser and the filesystem server), each with the settings that decide which risk factors it adds, the settings that help, a real incident where one is public, and a link to its current docs.
 - **The doors:** where you can still enforce rules (device, agent app, network, identity), given where the agent runs.
-- **"Can I have one?":** yes on these terms, or not this one, not yet, with a reply you can send.
+- **Approval decision:** approved with conditions, or not approved yet with the conditions still missing, plus a reply you can send to whoever asked.
 - **Getting to yes:** the controls that close each missing term. The full list is in [CONTROLS.md](CONTROLS.md).
 - **A one-pager:** five questions with a "last checked" date, the bad-day steps, and what is left to fix. Copy it as text or print it.
 
