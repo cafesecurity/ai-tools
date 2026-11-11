@@ -49,9 +49,9 @@ An approval is a photograph. Someone has to look again.
 
 With all three lit, one planted instruction can read sensitive data and send it out.
 
-- Dim A: keep unvetted tools and outside content out of the session that holds sensitive data.
-- Dim B: narrow what it can see until what is left would not hurt to lose.
-- Dim C: sending to new recipients, paying, and changing records each need a person.
+- Dim untrusted input: keep unvetted tools and outside content out of the session that holds sensitive data.
+- Dim sensitive data: narrow what it can see until what is left would not hurt to lose.
+- Dim acts or sends: sending to new recipients, paying, and changing records each need a person.
 - Make approvals cover edits to records, not only "send" and "pay". Approvals guard verbs.
 - Prefer boundaries to prompts: a sandbox or an allowed-destinations list means fewer approvals, and each one gets read.
 

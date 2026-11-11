@@ -76,19 +76,20 @@ label.o input { width: 20px; height: 20px; margin: 3px 0 0; accent-color: var(--
 label.o b { font-weight: 600; }
 label.o small { display: block; color: var(--muted); font-size: 14px; }
 .chips { display: flex; gap: 4px; }
-.chip { font-family: var(--mono); font-size: 13px; width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; color: #10203A; font-weight: 700; }
+.chips { flex-wrap: wrap; justify-content: flex-end; }
+.chip { font-size: 12px; line-height: 1; padding: 5px 8px; border-radius: 999px; color: #10203A; font-weight: 700; white-space: nowrap; display: inline-block; align-self: start; }
 .chip.A { background: var(--lamp-a); } .chip.B { background: var(--lamp-b); } .chip.C { background: var(--lamp-c); }
 .result { position: sticky; top: 16px; background: var(--panel-2); border: 2px solid var(--line); border-radius: 16px; padding: 22px; }
 .result h2 { font-size: 15px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 0 0 14px; }
 .lamps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px; }
 .lamp { text-align: center; }
 .bulb {
-  width: 76px; height: 76px; border-radius: 50%; margin: 0 auto 8px; display: grid; place-items: center;
-  font-size: 34px; font-weight: 700; border: 4px solid var(--c); color: var(--c); background: var(--panel);
+  width: min(118px, 100%); aspect-ratio: 1; border-radius: 50%; margin: 0 auto 10px; display: grid; place-items: center;
+  font-size: 16px; line-height: 1.15; font-weight: 700; text-align: center; padding: 8px; text-wrap: balance;
+  border: 4px solid var(--c); color: var(--c); background: var(--panel);
   transition: background .2s, box-shadow .2s;
 }
 .lamp.on .bulb { background: var(--c); color: #10203A; box-shadow: 0 0 0 10px color-mix(in srgb, var(--c) 22%, transparent); }
-.lamp b { display: block; font-size: 15px; }
 .lamp small { color: var(--muted); font-size: 13px; display: block; min-height: 2.6em; }
 .lamp .state { font-family: var(--mono); font-size: 12px; letter-spacing: .08em; color: var(--muted); }
 .lamp.on .state { color: var(--c); }
@@ -166,7 +167,7 @@ footer a { color: var(--lamp-a); }
       </section>
       <section class="step">
         <h2><span class="n">2</span>What can it reach?</h2>
-        <p>Each connection lights one or more lamps: <b>A</b> untrusted input, <b>B</b> sensitive data, <b>C</b> can act or send.</p>
+        <p>Each connection lights one or more of three lamps: <span class="chip A">Untrusted input</span> <span class="chip B">Sensitive data</span> <span class="chip C">Acts or sends</span></p>
         <div class="opts" id="conns"></div>
       </section>
       <section class="step">
@@ -275,9 +276,9 @@ const CONTROLS = {
     'Add agents to the mover and leaver checklist: revoke what the agent was granted, hand it over or shut it down, and check what the shutdown leaves behind.',
   ]},
   human: {h: 'Dim a lamp, or put a person in the loop', why: 'With all three lit, one planted instruction can read sensitive data and send it out.', c: [
-    'Dim A: keep unvetted tools and outside content out of the session that holds sensitive data.',
-    'Dim B: narrow what it can see until what is left would not hurt to lose.',
-    'Dim C: sending to new recipients, paying, and changing records each need a person.',
+    'Dim untrusted input: keep unvetted tools and outside content out of the session that holds sensitive data.',
+    'Dim sensitive data: narrow what it can see until what is left would not hurt to lose.',
+    'Dim acts or sends: sending to new recipients, paying, and changing records each need a person.',
     'Make approvals cover edits to records, not only "send" and "pay". Approvals guard verbs.',
     'Prefer boundaries to prompts: a sandbox or an allowed-destinations list means fewer approvals, and each one gets read.',
   ]},
@@ -293,7 +294,7 @@ const CONTROLS = {
     'Keep your own logs at the systems the agent touches: your search tool, mail, and payments.',
   ]},
 };
-const LAMPS = {A: ['Untrusted input', 'It reads things outsiders can write'], B: ['Sensitive data', 'It can reach things that matter'], C: ['Acts or sends', 'It can change things or send them out']};
+const LAMPS = {A: ['Untrusted input', 'It reads things outsiders can write', 'Untrusted'], B: ['Sensitive data', 'It can reach things that matter', 'Sensitive'], C: ['Acts or sends', 'It can change things or send them out', 'Acts']};
 // Made-up setups. Each shows how the count changes with the configuration; none describes a product's defaults.
 const EXAMPLES = [
   {title: "Imogen's assistant (from the video)", name: "Imogen's assistant", owner: '', run: 'cloud', recheck: '', conns: ['inbox', 'cal', 'files', 'pay', 'mcp3'], ctrls: [], logs: 'vendor',
@@ -303,15 +304,15 @@ const EXAMPLES = [
   {title: 'OpenClaw on a home server, work inbox connected', name: 'OpenClaw (home server)', owner: '', run: 'self', recheck: '', conns: ['inbox', 'cal', 'send', 'web', 'exec'], ctrls: [], logs: 'none',
     note: 'Assumes: someone runs it on their own machine at home and has signed it in to their work email and calendar. Only the identity door is left.'},
   {title: 'Grok Bot on a business plan, research only', name: 'Grok Bot (research)', owner: 'Research lead', run: 'cloud', recheck: '+90', conns: ['web', 'exec'], ctrls: ['plan', 'narrow', 'list'], logs: 'ours',
-    note: 'Assumes: a company plan with audit logs exported to us, used to read the public web and draft reports, with no company data connected. Lamp B stays dark.'},
+    note: 'Assumes: a company plan with audit logs exported to us, used to read the public web and draft reports, with no company data connected. The sensitive-data lamp stays dark.'},
   {title: 'dots in a company workspace, sales team', name: 'dots (sales team)', owner: 'Head of Sales Ops', run: 'cloud', recheck: '+90', conns: ['inbox', 'cal', 'send', 'people', 'mcpok'], ctrls: ['plan', 'list', 'human'], logs: 'ours',
     note: 'Assumes: switched on in a company workspace, connected to mail, calendar and the customer system through approved servers, with broad access and a person approving what it sends.'},
   {title: 'Claude Duet on an executive\'s personal plan', name: 'Claude Duet (executive)', owner: 'The executive', run: 'cloud', recheck: '', conns: ['inbox', 'cal', 'files', 'send'], ctrls: ['human'], logs: 'vendor',
     note: 'Assumes: a personal subscription signed in to work mail, calendar and files, relying on the product asking before it sends. No company contract covers the data.'},
   {title: 'Muse on a personal account, marketing', name: 'Muse (marketing)', owner: 'Marketing manager', run: 'cloud', recheck: '', conns: ['web', 'send'], ctrls: ['narrow'], logs: 'vendor',
-    note: 'Assumes: a personal account used to research the public web and send messages, with no company data connected. Lamp B stays dark, so the count is fine; the terms are what fail.'},
+    note: 'Assumes: a personal account used to research the public web and send messages, with no company data connected. The sensitive-data lamp stays dark, so the count is fine; the terms are what fail.'},
   {title: 'Hermes Agent on a server we run, behind our gateway', name: 'Hermes Agent (internal)', owner: 'Platform team lead', run: 'server', recheck: '+90', conns: ['files', 'code', 'mcpok', 'exec'], ctrls: ['plan', 'narrow', 'list', 'human'], logs: 'ours',
-    note: 'Assumes: self-hosted on our own server, reading internal files and code only, with no inbox or web access. Lamp A stays dark, so nothing outsiders write reaches it.'},
+    note: 'Assumes: self-hosted on our own server, reading internal files and code only, with no inbox or web access. The untrusted-input lamp stays dark, so nothing outsiders write reaches it.'},
 ];
 const BLANK = {name: '', owner: '', run: 'laptop', recheck: '', conns: [], ctrls: [], logs: 'ours'};
 
@@ -323,7 +324,7 @@ const low = (t) => /^[A-Z]{2}/.test(t) ? t : t.replace(/^An? /, (m) => m.toLower
 const list = (a) => a.length < 2 ? a.join('') : a.slice(0, -1).join(', ') + ' and ' + a[a.length - 1];
 
 $('run').innerHTML = RUNS.map((r) => `<option value="${r.id}">${esc(r.t)}</option>`).join('');
-$('conns').innerHTML = CONNS.map((c) => `<label class="o" for="c-${c.id}"><input type="checkbox" id="c-${c.id}" data-conn="${c.id}"><span><b>${esc(c.t)}</b><small>${esc(c.why)}</small></span><span class="chips">${[...c.l].map((k) => `<span class="chip ${k}" title="${LAMPS[k][0]}">${k}</span>`).join('')}</span></label>`).join('');
+$('conns').innerHTML = CONNS.map((c) => `<label class="o" for="c-${c.id}"><input type="checkbox" id="c-${c.id}" data-conn="${c.id}"><span><b>${esc(c.t)}</b><small>${esc(c.why)}</small></span><span class="chips">${[...c.l].map((k) => `<span class="chip ${k}" title="${LAMPS[k][0]}">${LAMPS[k][2]}</span>`).join('')}</span></label>`).join('');
 $('ctrls').innerHTML = CTRLS.map((c) => `<label class="o" for="k-${c.id}"><input type="checkbox" id="k-${c.id}" data-ctrl="${c.id}"><span><b>${esc(c.t)}</b><small>${esc(c.s)}</small></span><span></span></label>`).join('');
 
 const plusDays = (n) => { const d = new Date(Date.now() + n * 864e5); return d.toISOString().slice(0, 10); };
@@ -358,13 +359,13 @@ function render() {
   const n = lit.length;
   const agent = s.name || 'This agent';
 
-  $('lamps').innerHTML = ['A', 'B', 'C'].map((k) => `<div class="lamp ${by[k].length ? 'on' : ''}" style="--c:var(--lamp-${k.toLowerCase()})"><div class="bulb">${k}</div><b>${LAMPS[k][0]}</b><small>${LAMPS[k][1]}</small><span class="state">${by[k].length ? 'LIT' : 'DARK'}</span></div>`).join('');
+  $('lamps').innerHTML = ['A', 'B', 'C'].map((k) => `<div class="lamp ${by[k].length ? 'on' : ''}" style="--c:var(--lamp-${k.toLowerCase()})"><div class="bulb">${LAMPS[k][0]}</div><small>${LAMPS[k][1]}</small><span class="state">${by[k].length ? 'LIT' : 'DARK'}</span></div>`).join('');
 
   let risk, riskCol, riskLine;
   if (!picked.length) { risk = 'Nothing connected yet'; riskCol = 'var(--muted)'; riskLine = 'Tick what it can reach in step 2.'; }
   else if (n === 3 && s.has('human')) { risk = 'All three lit, with a person in the loop'; riskCol = 'var(--accent)'; riskLine = 'Workable, but approvals wear thin: the twentieth prompt gets less attention than the first. Dimming a lamp is sturdier.'; }
   else if (n === 3) { risk = 'All three lit, and nothing stands in the way'; riskCol = 'var(--bad)'; riskLine = 'One planted instruction could take sensitive data and send it out, or change a record. Dim a lamp or put a person in the loop.'; }
-  else if (n === 2) { risk = 'Two lit: fine as it stands'; riskCol = 'var(--good)'; riskLine = `Lamp ${['A', 'B', 'C'].find((k) => !by[k].length)} is dark. The next tool someone adds could light it, so count again whenever its tools change.`; }
+  else if (n === 2) { risk = 'Two lit: fine as it stands'; riskCol = 'var(--good)'; riskLine = `The ${LAMPS[['A', 'B', 'C'].find((k) => !by[k].length)][0].toLowerCase()} lamp is dark. The next tool someone adds could light it, so count again whenever its tools change.`; }
   else { risk = 'Low risk as connected'; riskCol = 'var(--good)'; riskLine = 'A good place to start. Count again whenever its tools change.'; }
   $('risk').style.setProperty('--v', riskCol);
   $('risk').innerHTML = `<strong>${risk}</strong><span>${riskLine}</span>`;
@@ -372,7 +373,7 @@ function render() {
   if (n === 3) {
     const cheapest = ['A', 'B', 'C'].reduce((m, k) => by[k].length < by[m].length ? k : m, 'A');
     const how = {A: 'take it away from', B: 'narrow or remove', C: 'put a person in front of, or remove,'};
-    $('dim').innerHTML = `<h3>Which lamp to dim</h3><ul class="plain">${['A', 'B', 'C'].map((k) => `<li><span class="chip ${k}">${k}</span><span>${k === cheapest ? '<b>Cheapest:</b> ' : ''}${how[k]} ${esc(list(by[k]))}.</span></li>`).join('')}</ul>`;
+    $('dim').innerHTML = `<h3>Which lamp to dim</h3><ul class="plain">${['A', 'B', 'C'].map((k) => `<li style="grid-template-columns:auto 1fr"><span class="chip ${k}">${LAMPS[k][2]}</span><span>${k === cheapest ? '<b>Cheapest:</b> ' : ''}${how[k]} ${esc(list(by[k]))}.</span></li>`).join('')}</ul>`;
   } else $('dim').innerHTML = '';
 
   const plan = s.has('plan');
@@ -411,7 +412,7 @@ function render() {
   // ---- the one-pager ----
   const d = today();
   const gap = (t) => `<span class="gap">${t}</span>`;
-  const reach = picked.length ? `Lamps lit: ${lit.join(', ') || 'none'} (${n} of 3). ` + lit.map((k) => `${k}, ${LAMPS[k][0].toLowerCase()}: ${list(by[k])}`).join('. ') + '.' : gap('Not counted yet.');
+  const reach = picked.length ? `Lamps lit: ${n} of 3. ` + lit.map((k) => `${LAMPS[k][0]}: ${list(by[k])}`).join('. ') + '.' : gap('Not counted yet.');
   const logs = {ours: 'From logs we hold.', vendor: gap("Only from the vendor's side. Ask what they keep, for how long, and how we get it."), none: gap('We would not. No record is kept, or nobody knows where it is.')}[s.logs];
   const rows = [
     ['1. What have we got?', `${esc(agent)}, running on ${run.short}. Connected to: ${picked.length ? esc(list(picked.map((c) => low(c.t)))) : gap('nothing listed')}.`],
