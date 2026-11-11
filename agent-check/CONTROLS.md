@@ -1,20 +1,20 @@
-# Controls: turning "not this one, not yet" into "yes"
+# Controls: from "not approved yet" to "approved"
 
-The answer to "can I have one?" is yes on four terms, plus two conditions that depend on what the agent can reach. These are the controls that close each one, marked as policy and process (rules and routines people follow) or technical (settings and tools that enforce it). The same list appears in the tool, filtered to whatever is missing for the agent you describe.
+An agent is approved when four conditions are met, plus two more that depend on what it can reach. These are the controls that meet each one, marked as policy and process (rules and routines people follow) or technical (settings and tools that enforce it). The same list appears in the tool, filtered to whatever is missing for the agent you describe.
 
 Current as of November 2026. A thinking aid, not an assessment of any product, and not legal or compliance advice.
 
-## Term 1: put it on a plan the company controls
+## Condition 1: put it on a plan the company controls
 
 *Policy and process.* A personal account has no contract covering your data and no administrator.
 
-- Ask the vendor whether a business or enterprise plan exists for this assistant. Where none does yet, the answer stays "not this one, not yet".
+- Ask the vendor whether a business or enterprise plan exists for this assistant. Where none does yet, the answer stays "not approved yet".
 - Check the contract covers your data: where it is kept, who can see it, and whether it trains models.
 - Confirm administrators can see the agent, limit what it connects to, and switch it off.
 - Until then, stop it being granted access: restrict which third-party apps staff can connect to company accounts in your Google or Microsoft admin console.
 - Or bring the job home: run an equivalent agent on a computer you manage.
 
-## Term 2: cut its access to what the job needs
+## Condition 2: cut its access to what the job needs
 
 *Technical.* The less it can reach, the less a planted instruction can take.
 
@@ -25,7 +25,7 @@ Current as of November 2026. A thinking aid, not an assessment of any product, a
 - Keep payments and other money-moving systems out unless moving money is the job.
 - Remove connections it has not used when you next review it.
 
-## Term 3: connect it only to servers on your list
+## Condition 3: connect it only to servers on your list
 
 *Technical.* Every tool is something the agent reads and a way for data to leave.
 
@@ -36,7 +36,7 @@ Current as of November 2026. A thinking aid, not an assessment of any product, a
 - Scan agent configurations for risky tool combinations once you have more than a handful.
 - Check your suppliers' admin consoles for MCP servers they now run on your data, and their defaults.
 
-## Term 4: give it an owner and a date
+## Condition 4: give it an owner and a date
 
 *Policy and process.* An approval is a photograph. Someone has to look again.
 

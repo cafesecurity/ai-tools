@@ -190,7 +190,7 @@ footer a { color: var(--lamp-a); }
       <li>Tick what it can reach.</li>
       <li>Tick the controls already in place.</li>
     </ol>
-    <p>You'll see which of the three risks it has, where you can still enforce rules, a "yes" or "not yet" with what's missing, and a one-page summary to keep. Nothing you enter leaves this page.</p>
+    <p>You'll see which of the three risks it has, where you can still enforce rules, an approval decision with any conditions not yet met, and a one-page summary to keep. Nothing you enter leaves this page.</p>
   </header>
   <div class="bar">
     <span class="tag" id="mode"></span>
@@ -247,7 +247,7 @@ footer a { color: var(--lamp-a); }
       <div id="dim"></div>
       <h3>Where you can still enforce rules</h3>
       <ul class="plain" id="doors"></ul>
-      <h3>"Can I have one?"</h3>
+      <h3>Approval decision</h3>
       <div class="verdict" id="answer"></div>
       <div class="reply" id="reply"></div>
     </aside>
@@ -301,10 +301,10 @@ const CTRLS = [
   {id: 'list', g: 'tech', t: 'It can connect only to servers on our list', s: 'Enforced by the agent app\'s allowlist or a gateway, and a changed tool description gets reviewed again. A list on paper alone does not count.'},
   {id: 'human', g: 'tech', t: 'A person approves what it sends, pays or changes', s: 'Set in the product or a gateway, and including edits to records, not only "send" and "pay".'},
 ];
-// The controls behind each term: what to do to turn "not yet" into "yes".
+// The controls behind each condition: what to do to turn "not approved yet" into "approved".
 const CONTROLS = {
   plan: {g: 'policy', h: 'Put it on a plan the company controls', why: 'A personal account has no contract covering your data and no administrator.', c: [
-    'Ask the vendor whether a business or enterprise plan exists for this assistant. Where none does yet, the answer stays "not this one, not yet".',
+    'Ask the vendor whether a business or enterprise plan exists for this assistant. Where none does yet, the answer stays "not approved yet".',
     'Check the contract covers your data: where it is kept, who can see it, and whether it trains models.',
     'Confirm administrators can see the agent, limit what it connects to, and switch it off.',
     'Until then, stop it being granted access: restrict which third-party apps staff can connect to company accounts in your Google or Microsoft admin console.',
@@ -597,10 +597,10 @@ function render() {
   const missing = miss.map((m) => m[1]);
   const yes = picked.length > 0 && missing.length === 0;
   $('answer').style.setProperty('--v', yes ? 'var(--good)' : 'var(--bad)');
-  $('answer').innerHTML = !picked.length ? '<strong style="color:var(--muted)">No answer yet</strong>' : yes ? '<strong>Yes, on these terms.</strong><span>All in place. Start with low-risk work and widen it as you learn.</span>' : `<strong>Not this one, not yet.</strong><span>Missing:</span><ul class="plain" style="margin-top:6px">${missing.map((m) => `<li><span class="no">✕</span><span>${esc(m)}</span></li>`).join('')}</ul>`;
-  const reply = !picked.length ? 'Tick what it connects to, and a reply you can send appears here.'
-    : yes ? `Yes. ${agent} is on a plan we control, has only the access it needs, connects only to servers on our list, and ${s.owner} owns it. We look at it again on ${fmtDate(s.recheck)}.`
-    : `Not this one, not yet. Before ${agent === 'This agent' ? 'this agent' : agent} goes ahead we need: ${missing.join('; ')}. Once ${missing.length > 1 ? 'those are' : 'that is'} in place, the answer is yes.`;
+  $('answer').innerHTML = !picked.length ? '<strong style="color:var(--muted)">No decision yet</strong>' : yes ? '<strong>Approved, with conditions.</strong><span>All conditions are met. Start with low-risk work and widen its use as you learn.</span>' : `<strong>Not approved yet.</strong><span>Conditions not met:</span><ul class="plain" style="margin-top:6px">${missing.map((m) => `<li><span class="no">✕</span><span>${esc(m)}</span></li>`).join('')}</ul>`;
+  const reply = !picked.length ? 'Tick what it connects to, and a reply you can send to whoever asked appears here.'
+    : yes ? `Approved. ${agent} is on a plan we control, has only the access it needs, connects only to servers on our list, and ${s.owner} owns it. We look at it again on ${fmtDate(s.recheck)}.`
+    : `Not approved yet. Before ${agent === 'This agent' ? 'this agent' : agent} can go ahead, we need: ${missing.join('; ')}. Once ${missing.length > 1 ? 'these are' : 'this is'} in place, we can approve it.`;
   $('reply').textContent = reply;
 
   // ---- getting to yes ----
@@ -608,8 +608,8 @@ function render() {
   const soft = picked.length && s.logs !== 'ours' ? ['logs'] : [];
   const card = (id, cls) => `<div class="card ${cls}"><span class="kind">${CONTROLS[id].g === 'policy' ? 'Policy and process' : 'Technical'}</span><h3>${CONTROLS[id].h}</h3><p class="why">${CONTROLS[id].why}</p><ul>${CONTROLS[id].c.map((c) => `<li>${esc(c)}</li>`).join('')}</ul></div>`;
   $('toyes').innerHTML = !picked.length ? '' : yes
-    ? `<h2>Keeping it a yes</h2><p>Every term is in place today. Count again whenever its tools change, and on ${esc(fmtDate(s.recheck))}.</p>${soft.length ? `<div class="cards">${soft.map((id) => card(id, 'soft')).join('')}</div>` : ''}`
-    : `<h2>Getting to yes</h2><p>${fixes.length} ${fixes.length > 1 ? 'terms are' : 'term is'} missing. These are the controls that close each one. Tick the term in step 3 once it is true.</p><div class="cards">${fixes.map((id) => card(id, '')).join('')}${soft.map((id) => card(id, 'soft')).join('')}</div>`;
+    ? `<h2>Keeping it approved</h2><p>Every condition is met today. Count again whenever its tools change, and on ${esc(fmtDate(s.recheck))}.</p>${soft.length ? `<div class="cards">${soft.map((id) => card(id, 'soft')).join('')}</div>` : ''}`
+    : `<h2>Getting to yes</h2><p>${fixes.length} ${fixes.length > 1 ? 'conditions are' : 'condition is'} not met yet. These are the controls that meet each one. Tick it in step 3 once it is true.</p><div class="cards">${fixes.map((id) => card(id, '')).join('')}${soft.map((id) => card(id, 'soft')).join('')}</div>`;
 
   // ---- the one-pager ----
   const d = today();
@@ -635,7 +635,7 @@ function render() {
     <tbody>${rows.map(([q, a]) => `<tr><td>${q}</td><td>${a}</td><td>${d}</td></tr>`).join('')}</tbody></table></div>
     <div class="two">
       <div><h2>The bad day</h2><ol>${bad.map((b) => `<li>${b}</li>`).join('')}</ol></div>
-      <div><h2>Can they have it?</h2><p style="margin:0;font-size:15px">${esc(reply)}</p>
+      <div><h2>Approval decision</h2><p style="margin:0;font-size:15px">${esc(reply)}</p>
       <h2>When the owner moves on</h2><p style="margin:0;font-size:15px">Revoke what the agent was granted, hand it over or shut it down, and check what the shutdown leaves behind.</p></div>
     </div>
     ${fixes.length ? `<h2>To get to yes</h2><div id="fixes">${fixes.map((id) => `<div class="fixh">${CONTROLS[id].h}</div><ul class="fix">${CONTROLS[id].c.map((c) => `<li>${esc(c)}</li>`).join('')}</ul>`).join('')}</div>` : ''}`;
@@ -647,7 +647,7 @@ function paperText() {
   p.querySelectorAll('tbody tr').forEach((tr) => { const c = tr.children; lines.push(`${c[0].textContent}\n   ${c[1].textContent}\n   Last checked: ${c[2].textContent}`); });
   lines.push('', 'THE BAD DAY');
   p.querySelectorAll('ol li').forEach((li, i) => lines.push(`${i + 1}. ${li.textContent}`));
-  lines.push('', 'CAN THEY HAVE IT?', $('reply').textContent, '', 'WHEN THE OWNER MOVES ON', 'Revoke what the agent was granted, hand it over or shut it down, and check what the shutdown leaves behind.');
+  lines.push('', 'APPROVAL DECISION', $('reply').textContent, '', 'WHEN THE OWNER MOVES ON', 'Revoke what the agent was granted, hand it over or shut it down, and check what the shutdown leaves behind.');
   const fx = p.querySelector('#fixes');
   if (fx) { lines.push('', 'TO GET TO YES'); [...fx.children].forEach((el) => { if (el.className === 'fixh') lines.push('', el.textContent); else el.querySelectorAll('li').forEach((li) => lines.push('- ' + li.textContent)); }); }
   return lines.join('\n');
