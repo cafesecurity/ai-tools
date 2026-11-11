@@ -286,7 +286,7 @@ footer a { color: var(--lamp-a); }
     <aside class="result" aria-live="polite">
       <h2>Risk factors</h2>
       <div class="lamps" id="lamps"></div>
-      <p class="factnote">Any two can be managed. All three together let one planted instruction read sensitive data and send it out. (The video shows these as three lamps.)</p>
+      <p class="factnote">Any two can be managed. All three together let one planted instruction read sensitive data and send it out. (The video shows these as three lamps.) Risk is one input to approval: the decision also needs the conditions below to be met.</p>
       <div class="verdict" id="risk"></div>
       <button type="button" class="mini" id="mini" data-go="4"></button>
     </aside>
@@ -506,7 +506,7 @@ const EXAMPLES = [
     note: 'Assumes: someone runs it on their own machine at home and has signed it in to their work email and calendar. Identity is the only place left to enforce rules.'},
   {title: 'Grok Bot on a business plan, research only', agent: 'grok', name: 'Grok Bot (research)', owner: 'Research lead', run: 'cloud', recheck: '+90',
     conns: ['web', 'exec'], ctrls: ['plan', 'narrow', 'logs'],
-    note: 'Assumes: an Enterprise plan with audit logs exported to us, used to read the public web and draft reports, with no company data and no MCP servers connected. No sensitive data in reach, so it can be approved; alerting is still recommended.'},
+    note: 'Assumes: an Enterprise plan with audit logs exported to us, used to read the public web and draft reports, with no company data and no MCP servers connected. No sensitive data in reach, so the risk is moderate and every condition is met; alerting is still recommended.'},
   {title: 'dots in a company workspace, sales team', agent: 'dots', name: 'dots (sales team)', owner: 'Head of Sales Ops', run: 'cloud', recheck: '+90',
     conns: ['inbox', 'cal', 'send'], servers: {salesforce: ['read', 'web', 'write']}, srvok: {salesforce: true}, ctrls: ['plan', 'list', 'human', 'logs'],
     note: 'Assumes: switched on in a company workspace with mail and calendar, plus the Salesforce server (on our approved list) with write access, and a person approving what it sends. Access is broader than the job needs, so not yet.'},
@@ -515,7 +515,7 @@ const EXAMPLES = [
     note: 'Assumes: a personal subscription signed in to work mail, calendar and files, relying on the product asking before it sends. No company plan exists for it yet, so it cannot be approved.'},
   {title: 'Muse on a personal account, marketing', agent: 'muse', name: 'Muse (marketing)', owner: 'Marketing manager', run: 'cloud', recheck: '',
     conns: ['web', 'send'], ctrls: ['narrow'],
-    note: 'Assumes: a personal account used to research the public web and send messages, with no company data connected. Only two risk factors, so the risk is acceptable; the approval conditions are what fail.'},
+    note: 'Assumes: a personal account used to research the public web and send messages, with no company data connected. Only two risk factors, so the risk is moderate; it is the approval conditions that fail.'},
   {title: 'Hermes Agent on a server we run, behind our gateway', agent: 'hermes', name: 'Hermes Agent (internal)', owner: 'Platform team lead', run: 'server', recheck: '+90',
     conns: ['files', 'exec'], servers: {github: ['private']}, srvok: {github: true}, ctrls: ['plan', 'narrow', 'list', 'human', 'logs', 'alerts'],
     note: 'Assumes: self-hosted on our own server, reading internal files and the GitHub server in read-only mode on private repositories (on our approved list), with no inbox or web access. No untrusted input, every condition met, logging and alerting on.'},
@@ -619,10 +619,10 @@ function render() {
 
   let risk, riskCol, riskLine;
   if (!picked.length) { risk = 'Nothing connected yet'; riskCol = 'var(--muted)'; riskLine = 'Tick what it can reach in step 2.'; }
-  else if (n === 3 && s.has('human')) { risk = 'All three present, mitigated by human approval'; riskCol = 'var(--accent)'; riskLine = 'Workable, but approvals wear thin: the twentieth prompt gets less attention than the first. Removing one factor is sturdier.'; }
-  else if (n === 3) { risk = 'All three present, with no mitigating control'; riskCol = 'var(--bad)'; riskLine = 'One planted instruction could take sensitive data and send it out, or change a record. Remove one factor, or require human approval.'; }
-  else if (n === 2) { risk = 'Two of three present: acceptable as configured'; riskCol = 'var(--good)'; riskLine = `No ${LAMPS[['A', 'B', 'C'].find((k) => !by[k].length)][0].toLowerCase()} factor. The next tool someone adds could introduce it, so reassess whenever its tools change.`; }
-  else { risk = 'Low risk as connected'; riskCol = 'var(--good)'; riskLine = 'A good place to start. Reassess whenever its tools change.'; }
+  else if (n === 3 && s.has('human')) { risk = 'Elevated risk: all three factors, mitigated by human approval'; riskCol = 'var(--accent)'; riskLine = 'Workable, but approvals wear thin: the twentieth prompt gets less attention than the first. Removing one factor is sturdier.'; }
+  else if (n === 3) { risk = 'High risk: all three factors, no mitigating control'; riskCol = 'var(--bad)'; riskLine = 'One planted instruction could take sensitive data and send it out, or change a record. Remove one factor, or require human approval.'; }
+  else if (n === 2) { risk = 'Moderate risk: two of three factors'; riskCol = 'var(--good)'; riskLine = `${{A: 'Nothing outsiders write reaches it, so there is no easy way to plant an instruction.', B: 'A planted instruction has no sensitive data to steal, though it could still make the agent act.', C: 'It can read but not send or change anything, so a planted instruction has no way out.'}[['A', 'B', 'C'].find((k) => !by[k].length)]} The next tool someone adds could change that, so reassess whenever its tools change.`; }
+  else { risk = 'Low risk: one factor or none'; riskCol = 'var(--good)'; riskLine = 'A good place to start. Reassess whenever its tools change.'; }
   $('risk').style.setProperty('--v', riskCol);
   $('risk').innerHTML = `<strong>${risk}</strong><span>${riskLine}</span>`;
 
