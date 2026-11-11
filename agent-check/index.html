@@ -121,6 +121,18 @@ ul.plain li { display: grid; grid-template-columns: 26px 1fr; gap: 6px; }
 .paper .fixh { font-weight: 700; font-size: 15px; margin: 8px 0 2px; }
 .paperwrap { margin-top: 36px; }
 .srvh { margin: 22px 0 6px; }
+.agents { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; margin-bottom: 12px; }
+.agentcard { display: flex; flex-direction: column; gap: 2px; background: var(--panel-2); border: 2px solid var(--line); border-radius: 10px; padding: 9px 11px; cursor: pointer; }
+.agentcard input { position: absolute; opacity: 0; pointer-events: none; }
+.agentcard:has(input:checked) { border-color: var(--accent); }
+.agentcard:has(input:focus-visible) { outline: 3px solid var(--lamp-a); outline-offset: 2px; }
+.agentcard b { font-size: 16px; }
+.agentcard small { font-size: 13px; color: var(--muted); }
+.agentcard .tagp { align-self: flex-start; margin-top: 4px; font-size: 12px; font-weight: 700; padding: 3px 8px; border-radius: 999px; color: #10203A; }
+.tagp.yes { background: var(--good); } .tagp.no { background: var(--bad); } .tagp.self { background: var(--lamp-a); }
+.agentinfo { background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; margin-bottom: 14px; display: flex; flex-direction: column; gap: 6px; font-size: 15px; }
+.agentinfo:empty { display: none; }
+.agentinfo ul { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 4px; }
 .disclaimer { margin: 0 0 12px; font-size: 14px; color: var(--muted); border-left: 4px solid var(--accent); padding: 4px 0 4px 12px; }
 .disclaimer b { color: var(--ink); font-weight: 600; }
 .srv { display: flex; flex-direction: column; gap: 0; }
@@ -178,6 +190,8 @@ footer a { color: var(--lamp-a); }
       <section class="step">
         <h2><span class="n">1</span>Which agent?</h2>
         <p>One agent at a time. Count per agent, not per tool.</p>
+        <div class="agents" id="agents" role="radiogroup" aria-label="Which agent"></div>
+        <div class="agentinfo" id="agentinfo"></div>
         <div class="fields">
           <label class="f" for="name">Agent<input type="text" id="name" placeholder="e.g. Finance team's assistant"></label>
           <label class="f" for="owner">Named owner (a person)<input type="text" id="owner" placeholder="Nobody yet"></label>
@@ -385,26 +399,67 @@ const SERVERS = [
     docs: 'https://github.com/modelcontextprotocol/servers/tree/main/src/filesystem'},
 ];
 
+// The agents from the video. Facts checked against vendors' own pages (and the video's fact-check table) on
+// 11 November 2026. plan: 'yes' a company-controlled plan exists, 'no' none found, 'self' self-hosted.
+const AGENTS = [
+  {id: 'grok', name: 'Grok Bot', by: 'xAI', run: 'cloud', plan: 'yes', planNote: 'Teams and Enterprise', facts: [
+    "Runs on its own computer in xAI's cloud. All Bots on one account share that computer, and xAI says not to treat separate Bots as a security boundary.",
+    'Company plans: Teams and Enterprise. Audit logs, the MCP allowlist, network controls and SCIM are Enterprise only.',
+    "Deleting a Bot doesn't remove its computer's files or signed-in browser sessions."],
+    help: 'On Enterprise: set a network allowlist, enforce auto-review, and turn on audit logs and Action Recording (off by default).',
+    docs: 'https://docs.x.ai/grok-bot/security'},
+  {id: 'dots', name: 'dots', by: 'OpenAI', run: 'cloud', plan: 'yes', planNote: 'Enterprise, Edu, Healthcare', facts: [
+    "Runs in OpenAI's cloud with its own browser. It reaches a member's computer only if \"Allow local computer access\" is on (off by default on Enterprise).",
+    'From 18 November 2026, on by default in Enterprise, Edu and Healthcare workspaces unless an admin opts out, and billing starts that day.',
+    "Enterprise model controls don't apply to dots."],
+    help: 'Before 18 November, opt out or grant "Use dots" to a pilot role only. Keep local computer access and custom rules off.',
+    docs: 'https://help.openai.com/en/articles/20001554-managing-dots-in-chatgpt-workspaces'},
+  {id: 'duet', name: 'Claude Duet', by: 'Anthropic', run: 'cloud', plan: 'no', planNote: 'Pro, Max and Ultra in the US only', facts: [
+    'Research preview on Pro, Max and Ultra plans in the US. Not on Team or Enterprise yet, so there is no admin console for it.',
+    'Designed to ask before it sends a message, makes a payment, signs a document or deletes anything.',
+    'Works on its own cloud computer and checks in every few hours.'],
+    help: 'Decide in writing whether staff may connect work accounts to it, and restrict which apps can be granted access to company accounts.',
+    docs: 'https://support.claude.com/en/articles/17631495-get-started-with-claude-duet'},
+  {id: 'muse', name: 'Muse', by: 'Meta', run: 'cloud', plan: 'no', planNote: 'per-person plans only', facts: [
+    "Meta's personal agent: it works in connected apps and a browser, and carries on in the background.",
+    "Muse for Small Business is sold per person. Meta's Enterprise Platform has no published admin controls yet.",
+    'Meta says a separate system, Sentinel, checks its actions.'],
+    help: 'Decide in writing whether staff may connect work accounts to it, and restrict which apps can be granted access to company accounts.',
+    docs: 'https://about.fb.com/news/2026/09/introducing-muse'},
+  {id: 'openclaw', name: 'OpenClaw', by: 'Open source', run: 'self', plan: 'self', planNote: 'self-hosted', facts: [
+    'Open source: it runs on whatever laptop or server someone installs it on. There is no vendor admin console.',
+    'Its skills marketplace has carried malicious skills: one audit by Koi found 341.',
+    'Microsoft can find and block it on managed devices (preview).'],
+    help: 'On managed devices, detect and block it. Where it is allowed, run it on a server you manage, behind your gateway, with reviewed skills only.',
+    links: [['Koi audit', 'https://koi.ai/blog/clawhavoc-341-malicious-clawedbot-skills-found-by-the-bot-they-were-targeting'], ['Microsoft Shadow AI (preview)', 'https://learn.microsoft.com/en-us/microsoft-365/admin/manage/agent-shadow-ai']]},
+  {id: 'hermes', name: 'Hermes Agent', by: 'Open source', run: 'self', plan: 'self', planNote: 'self-hosted', facts: [
+    'Open source and self-hosted, like OpenClaw. There is no vendor admin console.',
+    'Its controls are whatever you build around it: the machine, the network, and the accounts it signs in to.'],
+    help: 'Run it on a server you manage, behind your gateway, with an identity of its own.',
+    docs: 'https://hermes-agent.org/about/'},
+  {id: 'custom', name: 'Custom or other', by: 'Any other agent', run: 'laptop', plan: '', facts: []},
+];
+
 // Made-up setups. Each shows how the count changes with the configuration; none describes a product's defaults.
 const EXAMPLES = [
-  {title: "Imogen's assistant (from the video)", name: "Imogen's assistant", owner: '', run: 'cloud', recheck: '', conns: ['inbox', 'cal', 'files', 'pay', 'mcp3'], ctrls: [], logs: 'vendor',
+  {title: "Imogen's assistant (from the video)", agent: 'custom', name: "Imogen's assistant", owner: '', run: 'cloud', recheck: '', conns: ['inbox', 'cal', 'files', 'pay', 'mcp3'], ctrls: [], logs: 'vendor',
     note: 'The made-up week from the video: an always-on assistant on a personal plan, signed in as a finance manager, with a currency converter she found online.'},
-  {title: 'OpenClaw on a developer\'s work laptop', name: 'OpenClaw (developer laptop)', owner: '', run: 'laptop', recheck: '', conns: ['web', 'exec', 'mcp3'], servers: {github: ['public', 'private', 'write']}, ctrls: [], logs: 'none',
+  {title: 'OpenClaw on a developer\'s work laptop', agent: 'openclaw', name: 'OpenClaw (developer laptop)', owner: '', run: 'laptop', recheck: '', conns: ['web', 'exec', 'mcp3'], servers: {github: ['public', 'private', 'write']}, ctrls: [], logs: 'none',
     note: 'Assumes: a developer installed it themselves on a managed laptop, connected GitHub with a token that reaches private repositories, and added a community skill nobody reviewed (counted here as an unvetted server).'},
-  {title: 'OpenClaw on a home server, work inbox connected', name: 'OpenClaw (home server)', owner: '', run: 'self', recheck: '', conns: ['inbox', 'cal', 'send', 'web', 'exec'], ctrls: [], logs: 'none',
+  {title: 'OpenClaw on a home server, work inbox connected', agent: 'openclaw', name: 'OpenClaw (home server)', owner: '', run: 'self', recheck: '', conns: ['inbox', 'cal', 'send', 'web', 'exec'], ctrls: [], logs: 'none',
     note: 'Assumes: someone runs it on their own machine at home and has signed it in to their work email and calendar. Only the identity door is left.'},
-  {title: 'Grok Bot on a business plan, research only', name: 'Grok Bot (research)', owner: 'Research lead', run: 'cloud', recheck: '+90', conns: ['web', 'exec'], ctrls: ['plan', 'narrow', 'list'], logs: 'ours',
+  {title: 'Grok Bot on a business plan, research only', agent: 'grok', name: 'Grok Bot (research)', owner: 'Research lead', run: 'cloud', recheck: '+90', conns: ['web', 'exec'], ctrls: ['plan', 'narrow', 'list'], logs: 'ours',
     note: 'Assumes: a company plan with audit logs exported to us, used to read the public web and draft reports, with no company data connected. The sensitive-data lamp stays dark.'},
-  {title: 'dots in a company workspace, sales team', name: 'dots (sales team)', owner: 'Head of Sales Ops', run: 'cloud', recheck: '+90', conns: ['inbox', 'cal', 'send', 'people', 'mcpok'], ctrls: ['plan', 'list', 'human'], logs: 'ours',
+  {title: 'dots in a company workspace, sales team', agent: 'dots', name: 'dots (sales team)', owner: 'Head of Sales Ops', run: 'cloud', recheck: '+90', conns: ['inbox', 'cal', 'send', 'people', 'mcpok'], ctrls: ['plan', 'list', 'human'], logs: 'ours',
     note: 'Assumes: switched on in a company workspace, connected to mail, calendar and the customer system through approved servers, with broad access and a person approving what it sends.'},
-  {title: 'Claude Duet on an executive\'s personal plan', name: 'Claude Duet (executive)', owner: 'The executive', run: 'cloud', recheck: '', conns: ['inbox', 'cal', 'files', 'send'], ctrls: ['human'], logs: 'vendor',
+  {title: 'Claude Duet on an executive\'s personal plan', agent: 'duet', name: 'Claude Duet (executive)', owner: 'The executive', run: 'cloud', recheck: '', conns: ['inbox', 'cal', 'files', 'send'], ctrls: ['human'], logs: 'vendor',
     note: 'Assumes: a personal subscription signed in to work mail, calendar and files, relying on the product asking before it sends. No company contract covers the data.'},
-  {title: 'Muse on a personal account, marketing', name: 'Muse (marketing)', owner: 'Marketing manager', run: 'cloud', recheck: '', conns: ['web', 'send'], ctrls: ['narrow'], logs: 'vendor',
+  {title: 'Muse on a personal account, marketing', agent: 'muse', name: 'Muse (marketing)', owner: 'Marketing manager', run: 'cloud', recheck: '', conns: ['web', 'send'], ctrls: ['narrow'], logs: 'vendor',
     note: 'Assumes: a personal account used to research the public web and send messages, with no company data connected. The sensitive-data lamp stays dark, so the count is fine; the terms are what fail.'},
-  {title: 'Hermes Agent on a server we run, behind our gateway', name: 'Hermes Agent (internal)', owner: 'Platform team lead', run: 'server', recheck: '+90', conns: ['files', 'code', 'mcpok', 'exec'], ctrls: ['plan', 'narrow', 'list', 'human'], logs: 'ours',
+  {title: 'Hermes Agent on a server we run, behind our gateway', agent: 'hermes', name: 'Hermes Agent (internal)', owner: 'Platform team lead', run: 'server', recheck: '+90', conns: ['files', 'code', 'mcpok', 'exec'], ctrls: ['plan', 'narrow', 'list', 'human'], logs: 'ours',
     note: 'Assumes: self-hosted on our own server, reading internal files and code only, with no inbox or web access. The untrusted-input lamp stays dark, so nothing outsiders write reaches it.'},
 ];
-const BLANK = {name: '', owner: '', run: 'laptop', recheck: '', conns: [], ctrls: [], logs: 'ours'};
+const BLANK = {agent: 'custom', name: '', owner: '', run: 'laptop', recheck: '', conns: [], ctrls: [], logs: 'ours'};
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
@@ -415,6 +470,15 @@ const list = (a) => a.length < 2 ? a.join('') : a.slice(0, -1).join(', ') + ' an
 
 $('run').innerHTML = RUNS.map((r) => `<option value="${r.id}">${esc(r.t)}</option>`).join('');
 $('conns').innerHTML = CONNS.map((c) => `<label class="o" for="c-${c.id}"><input type="checkbox" id="c-${c.id}" data-conn="${c.id}"><span><b>${esc(c.t)}</b><small>${esc(c.why)}</small></span><span class="chips">${[...c.l].map((k) => `<span class="chip ${k}" title="${LAMPS[k][0]}">${LAMPS[k][2]}</span>`).join('')}</span></label>`).join('');
+const planTag = (a) => a.plan === 'yes' ? '<span class="tagp yes">Company plan</span>' : a.plan === 'no' ? '<span class="tagp no">No company plan</span>' : a.plan === 'self' ? '<span class="tagp self">Self-hosted</span>' : '';
+$('agents').innerHTML = AGENTS.map((a) => `<label class="agentcard" for="a-${a.id}"><input type="radio" name="agent" id="a-${a.id}" value="${a.id}" data-agent="${a.id}"><b>${esc(a.name)}</b><small>${esc(a.by)}</small>${planTag(a)}</label>`).join('');
+const agentNow = () => AGENTS.find((a) => a.id === (document.querySelector('[data-agent]:checked') || {}).value) || AGENTS[AGENTS.length - 1];
+function showAgent() {
+  const a = agentNow();
+  $('agentinfo').innerHTML = !a.facts.length ? '' : `<ul>${a.facts.map((f) => `<li>${esc(f)}</li>`).join('')}</ul>
+    <div class="srvmeta"><b>Settings that help:</b> ${esc(a.help)}</div>
+    <div class="srvmeta">As of 11 November 2026; products change quickly. ${a.docs ? `<a href="${a.docs}">Current docs</a>` : ''}${(a.links || []).map(([t, u]) => `<a href="${u}">${esc(t)}</a>`).join(' · ')}</div>`;
+}
 const chipsFor = (l) => [...l].map((k) => `<span class="chip ${k}" title="${LAMPS[k][0]}">${LAMPS[k][2]}</span>`).join('');
 $('servers').innerHTML = SERVERS.map((v) => {
   const all = [...new Set((v.base + v.opts.map((o) => o.l).join('')).split(''))].sort().join('');
@@ -435,6 +499,7 @@ function load(s, mode) {
   $('note').textContent = s.note ? s.note + ' A made-up setup to show the count, not a statement of how the product works by default.' : ''; $('logs').value = s.logs;
   document.querySelectorAll('[data-conn]').forEach((el) => { el.checked = s.conns.includes(el.dataset.conn); });
   document.querySelectorAll('[data-ctrl]').forEach((el) => { el.checked = s.ctrls.includes(el.dataset.ctrl); });
+  const ag = $('a-' + (s.agent || 'custom')); if (ag) ag.checked = true;
   const sv = s.servers || {};
   document.querySelectorAll('[data-srv]').forEach((el) => { el.checked = !!sv[el.dataset.srv]; });
   document.querySelectorAll('[data-srvopt]').forEach((el) => { el.checked = !!(sv[el.dataset.srvopt] || []).includes(el.dataset.opt); });
@@ -455,7 +520,9 @@ function render() {
   $('k-list').disabled = unvetted; if (unvetted) $('k-list').checked = false;
   $('k-callback').disabled = !pays; if (!pays) $('k-callback').checked = false;
   const ours = $('run').value === 'server'; // we run it ourselves, so the plan question answers itself
-  $('k-plan').disabled = ours; if (ours) $('k-plan').checked = true;
+  const A = agentNow(), noPlan = A.plan === 'no';
+  $('k-plan').disabled = ours || noPlan; if (ours) $('k-plan').checked = true; if (noPlan && !ours) $('k-plan').checked = false;
+  showAgent();
 
   const s = read();
   const run = RUNS.find((r) => r.id === s.run);
@@ -500,7 +567,7 @@ function render() {
   $('doors').innerHTML = doors.map(([d, v, why]) => `<li><span class="${v === 1 ? 'ok' : v ? 'maybe' : 'no'}">${v === 1 ? '✓' : v ? '?' : '✕'}</span><span><b>${d}.</b> ${why}</span></li>`).join('');
 
   const miss = [];
-  if (!plan) miss.push(['plan', 'a plan the company controls']);
+  if (!plan) miss.push(['plan', noPlan ? `a plan the company controls (${A.name} has none: ${A.planNote}, as of November 2026)` : 'a plan the company controls']);
   if (!s.has('narrow')) miss.push(['narrow', 'the narrowest access that does the job']);
   if (!s.has('list')) miss.push(['list', unvetted ? 'only servers on our list (it uses one nobody has vetted)' : 'only servers on our list']);
   if (!s.owner || !s.recheck) miss.push(['owner', !s.owner && !s.recheck ? 'a named owner and a date we look again' : !s.owner ? 'a named owner' : 'a date we look again']);
@@ -566,6 +633,11 @@ function paperText() {
 }
 
 $('form').addEventListener('input', (e) => {
+  if (e.target.dataset && e.target.dataset.agent) {
+    const a = agentNow(), names = AGENTS.map((x) => x.name);
+    if (!$('name').value.trim() || names.includes($('name').value.trim())) $('name').value = a.id === 'custom' ? '' : a.name;
+    $('run').value = a.run;
+  }
   const id = e.target.dataset && e.target.dataset.srv;
   if (id && e.target.checked) SERVERS.find((v) => v.id === id).opts.forEach((o) => { $(`so-${id}-${o.id}`).checked = !!o.def; }); $('mode').textContent = 'Your agent'; $('note').textContent = ''; $('examples').value = ''; render(); });
 $('form').addEventListener('submit', (e) => e.preventDefault());
