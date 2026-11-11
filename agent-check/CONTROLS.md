@@ -45,13 +45,13 @@ Current as of November 2026. A thinking aid, not an assessment of any product, a
 - On that date, repeat this count and update "last checked".
 - Add agents to the mover and leaver checklist: revoke what the agent was granted, hand it over or shut it down, and check what the shutdown leaves behind.
 
-## When all three lamps are lit: dim a lamp, or put a person in the loop
+## When all three risk factors are present: remove one risk factor, or require human approval
 
-*Technical.* With all three lit, one planted instruction can read sensitive data and send it out.
+*Technical.* With all three risk factors present, one planted instruction can read sensitive data and send it out.
 
-- Dim untrusted input: keep unvetted tools and outside content out of the session that holds sensitive data.
-- Dim sensitive data: narrow what it can see until what is left would not hurt to lose.
-- Dim acts or sends: sending to new recipients, paying, and changing records each need a person.
+- Remove untrusted input: keep unvetted tools and outside content out of the session that holds sensitive data.
+- Limit data access: narrow what it can see until what is left would not hurt to lose.
+- Restrict actions: sending to new recipients, paying, and changing records each need a person.
 - Make approvals cover edits to records, not only "send" and "pay". Approvals guard verbs.
 - Prefer boundaries to prompts: a sandbox or an allowed-destinations list means fewer approvals, and each one gets read.
 
