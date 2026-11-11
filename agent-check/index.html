@@ -139,6 +139,7 @@ ul.plain li { display: grid; grid-template-columns: 26px 1fr; gap: 6px; }
 .card.soft { border-top-color: var(--accent); }
 h3.grp { margin: 16px 0 8px; font-size: 15px; display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; }
 h3.grp span { text-transform: none; letter-spacing: 0; font-weight: 400; color: var(--muted); font-size: 14px; }
+.rectag { font-size: 12px; font-weight: 700; padding: 3px 8px; border-radius: 999px; background: var(--panel); border: 1px solid var(--line); color: var(--muted); white-space: nowrap; }
 .grpnote { margin: 8px 0 0; font-size: 14px; color: var(--muted); }
 .card .kind { display: inline-block; font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
 .card h3 { margin: 0 0 2px; font-size: 18px; letter-spacing: 0; text-transform: none; color: var(--ink); }
@@ -252,13 +253,6 @@ footer a { color: var(--lamp-a); }
         <p class="grpnote">The named owner and review date are set in step 1.</p>
         <h3 class="grp">Technical <span>Settings and tools that enforce it, whatever people remember</span></h3>
         <div class="opts" id="ctrls-tech"></div>
-        <div class="fields" style="margin-top:12px">
-          <label class="f" for="logs">Audit log location<select id="logs">
-            <option value="ours">Logs we hold</option>
-            <option value="vendor">Only on the vendor's side</option>
-            <option value="none">None, or we don't know</option>
-          </select></label>
-        </div>
       </section>
     </form>
       <section class="step" data-tab="4" role="tabpanel">
@@ -329,6 +323,7 @@ const CTRLS = [
   {id: 'narrow', g: 'tech', t: 'It has the narrowest access that does the job', s: 'One mailbox, not everything; read-only where that will do.'},
   {id: 'list', g: 'tech', t: 'It can connect only to servers on our list', s: 'Enforced by the agent app\'s allowlist or a gateway, and a changed tool description gets reviewed again. A list on paper alone does not count.'},
   {id: 'human', g: 'tech', t: 'A person approves what it sends, pays or changes', s: 'Set in the product or a gateway, and including edits to records, not only "send" and "pay".'},
+  {id: 'logs', g: 'tech', rec: 1, t: 'Its activity is logged where we can review it', s: 'What it read, sent and changed, in logs we hold or can export when we need them. Vendor-only logs we cannot get do not count.'},
 ];
 // The controls behind each condition: what to do to turn "not approved yet" into "approved".
 const CONTROLS = {
@@ -374,7 +369,7 @@ const CONTROLS = {
     'Hold the first payment to changed details for a second approver.',
     'Agree in advance who rings the bank if money moves: the first hour matters.',
   ]},
-  logs: {g: 'tech', h: 'Get the audit log into your hands', why: 'Not a term for "yes", but without it a bad day cannot be reconstructed.', c: [
+  logs: {g: 'tech', h: 'Log its activity where you can review it', why: 'Recommended rather than required for approval, but without it a bad day cannot be reconstructed.', c: [
     'Ask the vendor what it records, for how long, and how you get it.',
     'Where an export exists, send it to your own log store.',
     'Keep your own logs at the systems the agent touches: your search tool, mail, and payments.',
@@ -539,16 +534,17 @@ $('servers').innerHTML = SERVERS.map((v) => {
       <div class="srvmeta"><a href="${v.docs}">Current docs</a></div>
     </div></div>`;
 }).join('');
-const ctrlHtml = (c) => `<label class="o" for="k-${c.id}"><input type="checkbox" id="k-${c.id}" data-ctrl="${c.id}"><span><b>${esc(c.t)}</b><small>${esc(c.s)}</small></span><span></span></label>`;
+const recTag = (c) => c.rec ? '<span class="rectag">Recommended</span>' : '';
+const ctrlHtml = (c) => `<label class="o" for="k-${c.id}"><input type="checkbox" id="k-${c.id}" data-ctrl="${c.id}"><span><b>${esc(c.t)}</b><small>${esc(c.s)}</small></span><span>${recTag(c)}</span></label>`;
 $('ctrls-policy').innerHTML = CTRLS.filter((c) => c.g === 'policy').map(ctrlHtml).join('');
 $('ctrls-tech').innerHTML = CTRLS.filter((c) => c.g === 'tech').map(ctrlHtml).join('');
 
 const plusDays = (n) => { const d = new Date(Date.now() + n * 864e5); return d.toISOString().slice(0, 10); };
 function load(s, mode) {
   $('name').value = s.name; $('owner').value = s.owner; $('run').value = s.run; $('recheck').value = s.recheck && s.recheck[0] === '+' ? plusDays(+s.recheck) : s.recheck;
-  $('note').textContent = s.note ? s.note + ' A made-up setup to show the risk assessment, not a statement of how the product works by default.' : ''; $('logs').value = s.logs;
+  $('note').textContent = s.note ? s.note + ' A made-up setup to show the risk assessment, not a statement of how the product works by default.' : '';
   document.querySelectorAll('[data-conn]').forEach((el) => { el.checked = s.conns.includes(el.dataset.conn); });
-  document.querySelectorAll('[data-ctrl]').forEach((el) => { el.checked = s.ctrls.includes(el.dataset.ctrl); });
+  document.querySelectorAll('[data-ctrl]').forEach((el) => { el.checked = s.ctrls.includes(el.dataset.ctrl) || (el.dataset.ctrl === 'logs' && s.logs === 'ours'); });
   const ag = $('a-' + (s.agent || 'custom')); if (ag) ag.checked = true;
   const sv = s.servers || {};
   $('srvbox').open = Object.keys(sv).length > 0;
@@ -562,7 +558,7 @@ function read() {
   const has = (id) => $('k-' + id).checked && (!$('k-' + id).disabled || id === 'plan');
   const servers = {};
   document.querySelectorAll('[data-srv]:checked').forEach((el) => { servers[el.dataset.srv] = [...document.querySelectorAll(`[data-srvopt="${el.dataset.srv}"]:checked`)].map((o) => o.dataset.opt); });
-  return {servers, name: $('name').value.trim(), owner: $('owner').value.trim(), run: $('run').value, recheck: $('recheck').value, logs: $('logs').value, conns, has};
+  return {servers, name: $('name').value.trim(), owner: $('owner').value.trim(), run: $('run').value, recheck: $('recheck').value, logs: $('k-logs').checked ? 'ours' : 'none', conns, has};
 }
 
 function render() {
@@ -654,7 +650,7 @@ function render() {
   const d = today();
   const gap = (t) => `<span class="gap">${t}</span>`;
   const reach = picked.length ? `Risk factors present: ${n} of 3. ` + lit.map((k) => `${LAMPS[k][0]}: ${list(by[k])}`).join('. ') + '.' : gap('Not counted yet.');
-  const logs = {ours: 'Audit logs are held by us.', vendor: gap('Audit logs are held only by the vendor. Confirm what is kept, for how long, and how we access it.'), none: gap('No audit log, or its location is unknown.')}[s.logs];
+  const logs = s.logs === 'ours' ? 'Its activity is logged where we can review it.' : gap('No logs we can review. Confirm what the vendor keeps, for how long, and how we get it.');
   const rows = [
     ['Agent and scope', `${esc(agent)}, running on ${run.short}. Connected to: ${picked.length ? esc(list(picked.map((c) => c.t))) : gap('nothing listed')}.`],
     ['Business owner', s.owner ? esc(s.owner) : gap('No named owner.')],
