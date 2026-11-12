@@ -72,6 +72,7 @@ export function consentPage(view: ConsentView): string {
 <dl>${who}<dt>Sends you back to</dt><dd>${escapeHtml(view.redirectHost)}</dd></dl>
 ${loopback}
 <p>It will be able to <strong>read</strong> your channel's statistics, analytics and (if the owner turned them on) recent comments. It cannot upload, edit, delete or post anything.</p>
+<p class="warn">Only continue if you clicked Connect in your own app just now. If someone sent you this link, cancel: approving it could connect their app to your channel.</p>
 <p class="note">Next you'll sign in with Google. Only accounts on this server's allowlist are accepted. This approval isn't remembered: you'll see this page every time.</p>
 <form method="post" action="/authorize">
 <input type="hidden" name="handle" value="${escapeHtml(view.handle)}">

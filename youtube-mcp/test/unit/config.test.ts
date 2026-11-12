@@ -58,3 +58,14 @@ describe('parseConfig', () => {
     expect(result.ok).toBe(true);
   });
 });
+
+describe('template placeholders', () => {
+  it.each([
+    ['PUBLIC_URL', 'https://yt-mcp.example.com'],
+    ['GOOGLE_CLIENT_ID', 'REPLACE.apps.googleusercontent.com'],
+    ['ALLOWED_GOOGLE_ACCOUNTS', 'you@example.com'],
+    ['GOOGLE_CLIENT_SECRET', 'replace-me'],
+  ])('refuses to start with %s left as the placeholder', (key, value) => {
+    expect(parseConfig({ ...BASE_SETTINGS, [key]: value }).ok).toBe(false);
+  });
+});

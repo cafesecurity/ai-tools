@@ -86,8 +86,16 @@ function parseRedirectUri(value: string): string | null {
   return url.toString();
 }
 
+/** Values from the template that must be replaced before the server will start. */
+const PLACEHOLDERS = ['https://yt-mcp.example.com', 'REPLACE.apps.googleusercontent.com', 'you@example.com', 'replace-me'];
+
 export function parseConfig(raw: RawSettings): ConfigResult {
   const problems: string[] = [];
+  for (const [key, value] of Object.entries(raw)) {
+    if (typeof value === 'string' && PLACEHOLDERS.some((placeholder) => value.includes(placeholder))) {
+      problems.push(`${key} still has the template's placeholder value`);
+    }
+  }
 
   const origin = raw.PUBLIC_URL ? parseOrigin(raw.PUBLIC_URL.trim()) : null;
   if (!origin) problems.push('PUBLIC_URL must be the https origin this server is reached at, with no path');

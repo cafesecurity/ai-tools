@@ -21,6 +21,8 @@ export interface ToolDeps {
   channelId: string;
   /** Off unless the operator sets ENABLE_COMMENTS=true: keeps strangers' text away from agents by default. */
   includeComments: boolean;
+  /** Called before every tool call: a per-call rate limit (one HTTP request can carry several calls). */
+  allowCall?: () => Promise<boolean>;
   today?: () => Date;
 }
 
@@ -38,7 +40,11 @@ function fail(message: string): ToolResult {
   return { content: [{ type: 'text', text: message }], isError: true };
 }
 
-async function guarded(tool: string, run: () => Promise<ToolResult>): Promise<ToolResult> {
+async function guarded(tool: string, run: () => Promise<ToolResult>, allowCall?: () => Promise<boolean>): Promise<ToolResult> {
+  if (allowCall && !(await allowCall())) {
+    logEvent('rate_limited', { tool });
+    return fail('Too many requests. Try again in a minute.');
+  }
   try {
     return await run();
   } catch (error) {
@@ -53,6 +59,7 @@ async function guarded(tool: string, run: () => Promise<ToolResult>): Promise<To
 
 export function buildServer(deps: ToolDeps): McpServer {
   const today = deps.today ?? (() => new Date());
+  const guard = (tool: string, run: () => Promise<ToolResult>) => guarded(tool, run, deps.allowCall);
   const server = new McpServer(
     { name: SERVER_NAME, version: SERVER_VERSION },
     {
@@ -71,7 +78,7 @@ export function buildServer(deps: ToolDeps): McpServer {
       annotations: READ_ONLY,
     },
     async () =>
-      guarded('get_channel_overview', async () => {
+      guard('get_channel_overview', async () => {
         const { uploads_playlist_id: _uploads, ...channel } = await deps.client.myChannel();
         return ok(channel);
       }),
@@ -87,7 +94,7 @@ export function buildServer(deps: ToolDeps): McpServer {
       annotations: READ_ONLY,
     },
     async ({ max_results }) =>
-      guarded('list_recent_videos', async () => {
+      guard('list_recent_videos', async () => {
         const channel = await deps.client.myChannel();
         return ok({ videos: await deps.client.recentUploads(channel.uploads_playlist_id, max_results) });
       }),
@@ -102,7 +109,7 @@ export function buildServer(deps: ToolDeps): McpServer {
       annotations: READ_ONLY,
     },
     async ({ video_id }) =>
-      guarded('get_video_details', async () => ok(await deps.client.ownedVideo(video_id, deps.channelId))),
+      guard('get_video_details', async () => ok(await deps.client.ownedVideo(video_id, deps.channelId))),
   );
 
   server.registerTool(
@@ -116,7 +123,7 @@ export function buildServer(deps: ToolDeps): McpServer {
       annotations: READ_ONLY,
     },
     async (input) =>
-      guarded('get_analytics_report', async () => {
+      guard('get_analytics_report', async () => {
         const problem = checkDateRange(input.start_date, input.end_date, today()) ?? checkSort(input);
         if (problem) return fail(problem);
         if (input.video_id) await deps.client.ownedVideo(input.video_id, deps.channelId);
@@ -148,7 +155,7 @@ export function buildServer(deps: ToolDeps): McpServer {
       annotations: READ_ONLY,
     },
     async ({ video_id, start_date, end_date }) =>
-      guarded('get_audience_retention', async () => {
+      guard('get_audience_retention', async () => {
         const video = await deps.client.ownedVideo(video_id, deps.channelId);
         const now = today();
         const end = end_date ?? now.toISOString().slice(0, 10);
@@ -187,7 +194,7 @@ export function buildServer(deps: ToolDeps): McpServer {
       annotations: READ_ONLY,
     },
     async ({ start_date, end_date, video_id }) =>
-      guarded('get_traffic_sources', async () => {
+      guard('get_traffic_sources', async () => {
         const now = today();
         const start = start_date ?? daysAgo(28, now);
         const end = end_date ?? now.toISOString().slice(0, 10);
@@ -220,7 +227,7 @@ export function buildServer(deps: ToolDeps): McpServer {
         annotations: READ_ONLY,
       },
       async ({ video_id, max_results }) =>
-        guarded('get_recent_comments', async () => {
+        guard('get_recent_comments', async () => {
           if (video_id) await deps.client.ownedVideo(video_id, deps.channelId);
           const comments = await deps.client.comments({ channelId: deps.channelId, videoId: video_id, max: max_results });
           return ok({ note: UNTRUSTED_NOTE, comments });

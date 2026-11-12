@@ -1,5 +1,8 @@
-// Template. No secrets belong in this file: set GOOGLE_CLIENT_SECRET with
-// `npx wrangler secret put GOOGLE_CLIENT_SECRET`. See README.md.
+// Template only: don't put your own values here. Copy it to wrangler.local.jsonc
+// (git-ignored) and deploy with `npm run deploy`, which uses the local copy.
+// The server refuses to start while any placeholder below is left in place.
+// No secrets belong in either file: set GOOGLE_CLIENT_SECRET with
+// `npx wrangler secret put GOOGLE_CLIENT_SECRET -c wrangler.local.jsonc`. See README.md.
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "youtube-mcp",
@@ -14,15 +17,18 @@
     { "binding": "OAUTH_KV", "id": "REPLACE_WITH_YOUR_KV_NAMESPACE_ID" }
   ],
   "ratelimits": [
-    // Platform rate limit per signed-in owner (and per IP for /register). When this binding is present it
+    // Limit on the owner's tool calls (each costs YouTube API quota). When this binding is present it
     // replaces RATE_LIMIT_PER_MINUTE, so keep the two in step. namespace_id is any number unique in your account.
-    { "name": "RATE_LIMITER", "namespace_id": "1001", "simple": { "limit": 30, "period": 60 } }
+    { "name": "RATE_LIMITER", "namespace_id": "1001", "simple": { "limit": 30, "period": 60 } },
+    // Per-IP limit on the routes anyone can reach (/authorize, /callback, /token, /register).
+    { "name": "ANON_RATE_LIMITER", "namespace_id": "1002", "simple": { "limit": 10, "period": 60 } }
   ],
   "observability": { "enabled": true },
   "vars": {
     // Non-secret settings. Each one is explained in README.md.
     "PUBLIC_URL": "https://yt-mcp.example.com",
     "GOOGLE_CLIENT_ID": "REPLACE.apps.googleusercontent.com",
+    // Prefer sub:<your Google subject ID> over an email address (see README).
     "ALLOWED_GOOGLE_ACCOUNTS": "you@example.com",
     "ALLOWED_CHANNEL_IDS": "",
     "ALLOWED_REDIRECT_URIS": "https://claude.ai/api/mcp/auth_callback https://claude.com/api/mcp/auth_callback",
