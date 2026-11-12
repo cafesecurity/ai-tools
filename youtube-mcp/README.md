@@ -43,7 +43,9 @@ MCP client (e.g. Claude) ──OAuth 2.1──▶ this server ──OAuth──�
 
 ## Deploy on Cloudflare Workers
 
-The code is split so the security logic (`src/core`) is platform-neutral; Cloudflare Workers is the first adapter (`src/platforms/cloudflare`). Porting notes are in [docs/PORTING.md](docs/PORTING.md). The free Workers plan is enough for one person.
+The code is split so the security logic (`src/core`) is platform-neutral; Cloudflare Workers is the first adapter (`src/platforms/cloudflare`). Porting notes are in [docs/PORTING.md](docs/PORTING.md).
+
+The free Workers plan is enough for one person's normal use. Its main limit is 1,000 KV writes a day, after which writes fail until midnight UTC. Each sign-in step and token refresh writes to KV, so a determined flood of anonymous sign-in requests from many addresses could use that up and block your own sign-ins for the day. The server limits each IP address to 10 such requests a minute. If your server's address is widely known, add a Cloudflare WAF rate-limiting rule for `/authorize`, `/callback`, `/token` and `/register`, or use the Workers Paid plan.
 
 You'll need Node.js 22+, a Cloudflare account, a Google account with your channel, and a domain or subdomain on Cloudflare for the server (for example `yt-mcp.example.com`).
 
@@ -52,7 +54,7 @@ You'll need Node.js 22+, a Cloudflare account, a Google account with your channe
 ```sh
 git clone https://github.com/cafesecurity/ai-tools.git
 cd ai-tools/youtube-mcp
-npx -y npm@11 ci
+npx -y npm@11.21.2 ci
 npm run check        # typecheck, unit tests and end-to-end tests
 ```
 
@@ -71,50 +73,53 @@ In the [Google Cloud console](https://console.cloud.google.com/):
 
 ### 3. Configure
 
+`wrangler.jsonc` is a template, and the server refuses to start while its placeholders are in place. Put your own values in a local copy that git ignores, so your email, domain and KV ID never end up in a commit:
+
 ```sh
+cp wrangler.jsonc wrangler.local.jsonc
 npx wrangler login
-npx wrangler kv namespace create OAUTH_KV          # paste the id into wrangler.jsonc
-npx wrangler secret put GOOGLE_CLIENT_SECRET       # paste the secret when asked
+npx wrangler kv namespace create OAUTH_KV                               # paste the id into wrangler.local.jsonc
+npx wrangler secret put GOOGLE_CLIENT_SECRET -c wrangler.local.jsonc    # paste the secret when asked
 ```
 
-Then edit the `vars` in `wrangler.jsonc`:
+Then edit the `vars` in `wrangler.local.jsonc`:
 
 | Setting | Required | Meaning |
 |---|---|---|
 | `PUBLIC_URL` | yes | The https origin of your server, no path. Requests for any other host are refused. |
 | `GOOGLE_CLIENT_ID` | yes | From step 2. The secret goes in `wrangler secret`, **never** in this file. |
-| `ALLOWED_GOOGLE_ACCOUNTS` | yes | Who may sign in: email addresses (must be verified by Google) or `sub:<Google subject ID>`, separated by spaces or commas. |
+| `ALLOWED_GOOGLE_ACCOUNTS` | yes | Who may sign in: `sub:<Google subject ID>` (preferred: it never changes and doesn't reveal your address) or email addresses (matched only when Google has verified them), separated by spaces or commas. Your subject ID is the `sub` value Google's userinfo endpoint returns for your account (for example via Google's OAuth 2.0 Playground). |
 | `ALLOWED_REDIRECT_URIS` | yes | Exact https redirect addresses of the MCP clients you use. For Claude: `https://claude.ai/api/mcp/auth_callback https://claude.com/api/mcp/auth_callback`. |
 | `ALLOWED_CHANNEL_IDS` | no | Pin to specific channel IDs (`UC…`). Empty means the signed-in account's own channel. |
 | `ALLOW_LOOPBACK_REDIRECTS` | no | `true` lets local apps (`http://localhost`) connect. Off by default: any program on your computer could listen there. |
 | `ALLOWED_ORIGINS` | no | Browser origins allowed to call `/mcp` directly. Empty means none; server-side clients like Claude don't need it. |
 | `ENABLE_COMMENTS` | no | `true` adds the comments tool. Read the caveat above first. |
-| `RATE_LIMIT_PER_MINUTE` | no | Fallback limit (default 30). The `RATE_LIMITER` binding in `wrangler.jsonc` takes over when present; keep the two in step. |
+| `RATE_LIMIT_PER_MINUTE` | no | Tool calls per minute for the owner (default 30). The `RATE_LIMITER` binding takes over when present; keep the two in step. Anonymous routes have their own fixed per-IP limit (`ANON_RATE_LIMITER`, 10 a minute). |
 
 The server checks every setting at start-up and refuses all sign-ins if any is missing or malformed. It never logs the values.
 
 ### 4. Deploy and route
 
 ```sh
-npm run deploy
+npm run deploy        # uses wrangler.local.jsonc
 ```
 
 Add a custom domain for the Worker (**Workers → your worker → Settings → Domains & Routes**) matching `PUBLIC_URL`. `workers.dev` and preview URLs are switched off in the template so the server is reachable at one address only.
 
 ### 5. Connect your client
 
-In Claude: **Settings → Connectors → Add custom connector**, URL `https://YOUR-HOST/mcp`. You'll see this server's consent page, then Google's sign-in. Other MCP clients work the same way once their redirect address is in `ALLOWED_REDIRECT_URIS`.
+In Claude: **Settings → Connectors → Add custom connector**, URL `https://YOUR-HOST/mcp`. You'll see this server's consent page, then Google's sign-in. Only approve a consent page that appears right after you clicked Connect yourself: approving Claude means approving the Claude app, so a link someone else sends you could connect *their* Claude account to your channel. Other MCP clients work the same way once their redirect address is in `ALLOWED_REDIRECT_URIS`.
 
 ### Removing access
 
-- **Remove a person:** take them off `ALLOWED_GOOGLE_ACCOUNTS` and redeploy. Their next call is refused, and their next token refresh revokes the Google token.
+- **Remove a person:** take them off `ALLOWED_GOOGLE_ACCOUNTS` and redeploy. Their next call is refused, and their next token refresh revokes the Google token. If they never refresh, their Google token stays valid at Google until the grant expires, so for an immediate cut also remove the app at Google's permissions page (below).
 - **Disconnect everything:** remove the app at [myaccount.google.com/permissions](https://myaccount.google.com/permissions). The server's refresh then fails and the client has to sign in again.
 
 ## Local development
 
 ```sh
 cp .dev.vars.example .dev.vars    # git-ignored
-npm run dev
+npm run dev                       # uses wrangler.local.jsonc
 ```
 
 Add `http://localhost:8787/callback` as an extra redirect URI on the Google client for local testing.
@@ -125,7 +130,9 @@ Add `http://localhost:8787/callback` as an extra redirect URI on the Google clie
 npm run check
 ```
 
-Unit tests cover configuration, allowlists, input validation, text sanitising, the Google client and every tool. The end-to-end tests run the bundled Worker in workerd with Google faked at the network boundary, and walk the whole flow: metadata, registration, consent, Google sign-in, tokens, MCP calls and refresh. They also check the refusals: unapproved apps, missing or plain PKCE, a stolen consent form, a stranger's Google account, a wrong host, a made-up token, a browser from an unlisted origin, and an owner removed from the allowlist.
+Unit tests cover configuration, allowlists, input validation, text sanitising, the Google client and every tool. The end-to-end tests run the bundled Worker in workerd with Google faked at the network boundary, and walk the whole flow: metadata, registration, consent, Google sign-in, tokens, MCP calls and refresh. They also check the refusals: unapproved apps, missing or plain PKCE, a stolen consent form, a stranger's Google account, a wrong host, a made-up token, a browser from an unlisted origin, batched requests, too many anonymous requests from one address, an unverified email, and an owner removed from the allowlist.
+
+The code had an independent security review before publication; the findings and fixes are summarised in [THREAT_MODEL.md](THREAT_MODEL.md#how-the-controls-are-checked).
 
 ## Licence
 

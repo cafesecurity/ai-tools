@@ -14,7 +14,7 @@ const BINDINGS = {
   PUBLIC_URL: ORIGIN,
   GOOGLE_CLIENT_ID: '123-abc.apps.googleusercontent.com',
   GOOGLE_CLIENT_SECRET: 'test-secret-not-real',
-  ALLOWED_GOOGLE_ACCOUNTS: 'owner@example.com',
+  ALLOWED_GOOGLE_ACCOUNTS: 'owner@example.com sub:3333333333',
   ALLOWED_REDIRECT_URIS: CLIENT_REDIRECT,
   ALLOW_LOOPBACK_REDIRECTS: 'false',
   ALLOWED_ORIGINS: '',
@@ -34,7 +34,8 @@ async function fakeGoogle(request: Request): Promise<Response> {
     if (form.get('client_secret') !== BINDINGS.GOOGLE_CLIENT_SECRET) return json({ error: 'invalid_client' }, 401);
     if (form.get('grant_type') === 'authorization_code') {
       if (!form.get('code_verifier')) return json({ error: 'invalid_grant' }, 400);
-      const who = form.get('code') === 'owner-code' ? 'owner' : 'stranger';
+      const code = form.get('code');
+      const who = code === 'owner-code' ? 'owner' : code === 'unverified-code' ? 'unverified' : 'stranger';
       return json({ access_token: `ya29.${who}`, refresh_token: `1//rt-${who}`, expires_in: 3599, scope: YT_SCOPES, token_type: 'Bearer' });
     }
     if (form.get('grant_type') === 'refresh_token') {
@@ -46,8 +47,11 @@ async function fakeGoogle(request: Request): Promise<Response> {
     return json({});
   }
   if (url.hostname === 'openidconnect.googleapis.com') {
-    const owner = request.headers.get('Authorization')?.startsWith('Bearer ya29.owner');
-    return json(owner ? { sub: '1111111111', email: 'owner@example.com', email_verified: true } : { sub: '2222222222', email: 'stranger@example.com', email_verified: true });
+    const auth = request.headers.get('Authorization') ?? '';
+    if (auth.startsWith('Bearer ya29.owner')) return json({ sub: '1111111111', email: 'owner@example.com', email_verified: true });
+    // Listed by subject ID, and showing the owner's email address without Google having verified it.
+    if (auth.startsWith('Bearer ya29.unverified')) return json({ sub: '3333333333', email: 'owner@example.com', email_verified: false });
+    return json({ sub: '2222222222', email: 'stranger@example.com', email_verified: true });
   }
   if (url.hostname.endsWith('googleapis.com')) {
     if (!request.headers.get('Authorization')?.startsWith('Bearer ya29.')) return json({ error: {} }, 401);
@@ -75,7 +79,13 @@ function options(bindings: Record<string, string>) {
     ],
   } as never);
 }
-const call = (path: string, init?: RequestInit) => mf.dispatchFetch(`${ORIGIN}${path}`, { redirect: 'manual', ...init } as never) as unknown as Promise<Response>;
+let ipCounter = 0;
+/** Each call comes from a fresh IP unless one is given, so the per-IP limit only bites where a test wants it to. */
+const call = (path: string, init?: RequestInit, ip = `198.51.100.${++ipCounter % 250}`) => {
+  const headers = new Headers(init?.headers);
+  headers.set('CF-Connecting-IP', ip);
+  return mf.dispatchFetch(`${ORIGIN}${path}`, { redirect: 'manual', ...init, headers } as never) as unknown as Promise<Response>;
+};
 
 beforeAll(async () => {
   mf = new Miniflare(options(BINDINGS));
@@ -267,6 +277,38 @@ describe('end to end', () => {
     expect(refreshToken).toBeTruthy();
   });
 
+  let unverifiedToken = '';
+  it('signs in an account listed by subject ID, without storing its unverified email', async () => {
+    const verifier = 'u'.repeat(43);
+    const response = await signIn(clientId, verifier, 'unverified-code');
+    expect(response.status).toBe(302);
+    const code = new URL(response.headers.get('Location')!).searchParams.get('code')!;
+    const token = await call('/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ grant_type: 'authorization_code', code, client_id: clientId, redirect_uri: CLIENT_REDIRECT, code_verifier: verifier, resource: `${ORIGIN}/mcp` }).toString(),
+    });
+    expect(token.status).toBe(200);
+    unverifiedToken = ((await token.json()) as { access_token: string }).access_token;
+  });
+
+  it('refuses JSON-RPC batches', async () => {
+    const one = { jsonrpc: '2.0', id: 1, method: 'tools/list', params: {} };
+    const response = await call('/mcp', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json', Accept: 'application/json, text/event-stream' },
+      body: JSON.stringify([one, { ...one, id: 2 }]),
+    });
+    expect(response.status).toBe(400);
+  });
+
+  it('limits anonymous routes per IP', async () => {
+    const statuses: number[] = [];
+    for (let i = 0; i < 12; i++) statuses.push((await call('/authorize?client_id=x', undefined, '203.0.113.9')).status);
+    expect(statuses.slice(0, 10).every((status) => status !== 429)).toBe(true);
+    expect(statuses.slice(10)).toEqual([429, 429]);
+  });
+
   it('serves read-only tools over MCP with the token', async () => {
     const transport = new StreamableHTTPClientTransport(new URL(`${ORIGIN}/mcp`), {
       fetch: (input, init) => mf.dispatchFetch(String(input), init as never) as unknown as Promise<Response>,
@@ -312,6 +354,15 @@ describe('end to end', () => {
     expect(first.status).toBe(200);
     const next = (await first.json()) as { access_token: string; refresh_token: string };
     expect(googleCalls.filter((c) => c === 'oauth2.googleapis.com/token').length).toBeGreaterThan(2);
+
+    // Remove the subject-ID entry: the account whose email was never verified loses access at once.
+    await mf.setOptions(options({ ...BINDINGS, ALLOWED_GOOGLE_ACCOUNTS: 'owner@example.com' }));
+    const unverified = await call('/mcp', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${unverifiedToken}`, 'Content-Type': 'application/json' },
+      body: '{}',
+    });
+    expect(unverified.status).toBe(403);
 
     await mf.setOptions(options({ ...BINDINGS, ALLOWED_GOOGLE_ACCOUNTS: 'someone-else@example.com' }));
     const mcp = await call('/mcp', {

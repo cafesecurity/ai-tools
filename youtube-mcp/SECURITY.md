@@ -9,8 +9,9 @@ Please report security issues privately through GitHub's **Report a vulnerabilit
 - **Read-only.** No tool can change a YouTube channel, and the server refuses a Google sign-in that grants more than read-only access.
 - **Single owner.** Only Google accounts on the operator's allowlist can sign in; only MCP clients whose exact redirect address the operator approved can connect.
 - **No token passthrough.** MCP clients get this server's own tokens, bound to its `/mcp` address. Google tokens stay on the server, encrypted at rest.
-- **No secrets in the repository.** The Google client secret is set with the platform's secret store. CI scans every push for credential patterns.
-- **Untrusted text is labelled.** Comments (off by default) and titles are returned as sanitised plain text, comments in a field named `untrusted_text`.
+- **No secrets or personal settings in the repository.** The Google client secret is set with the platform's secret store, and your own settings live in a git-ignored `wrangler.local.jsonc`. CI scans every push for credential patterns.
+- **Untrusted text is sanitised and labelled.** Comments (off by default) and titles are returned as plain text with hidden characters, markup and Markdown links removed; comments come in a field named `untrusted_text`.
+- **Rate limits.** Tool calls are limited per owner (batches are refused); anonymous sign-in routes are limited per IP.
 
 The threats considered, and the control for each, are in [THREAT_MODEL.md](THREAT_MODEL.md).
 
@@ -22,7 +23,7 @@ The threats considered, and the control for each, are in [THREAT_MODEL.md](THREA
 
 ## Supply chain
 
-- Dependencies are pinned to exact versions with a lockfile; install with `npx -y npm@11 ci`.
+- Dependencies are pinned to exact versions with a lockfile; install with `npx -y npm@11.21.2 ci` (npm itself is pinned in `packageManager`).
 - npm 11 blocks install scripts except the two listed in `allowScripts` (esbuild and workerd, by exact version).
 - GitHub Actions are pinned to commit SHAs and run with read-only permissions.
 - Nothing is published to npm. You deploy from source you can read.

