@@ -30,7 +30,7 @@ import {
   s256,
 } from '../../core/google';
 import { consentPage, htmlResponse, messagePage, pageCsp } from '../../core/html';
-import { UpstreamError } from '../../core/http';
+import { UpstreamError, readTextCapped } from '../../core/http';
 import { logEvent } from '../../core/log';
 import { formActionSources, isAllowedAccount, isAllowedChannel, isAllowedOrigin, isAllowedRedirectUri } from '../../core/policy';
 import { MemoryRateLimiter, type RateLimiter } from '../../core/ratelimit';
@@ -49,8 +49,10 @@ interface PlatformRateLimit {
 export interface Env extends RawSettings {
   OAUTH_KV: KVNamespace;
   OAUTH_PROVIDER: OAuthHelpers;
-  /** Optional Workers rate-limiting binding; preferred over the in-memory limiter when bound. */
+  /** Optional Workers rate-limiting binding for the owner's tool calls; preferred over the in-memory limiter. */
   RATE_LIMITER?: PlatformRateLimit;
+  /** Optional Workers rate-limiting binding for anonymous routes (/authorize, /callback, /token, /register), per IP. */
+  ANON_RATE_LIMITER?: PlatformRateLimit;
 }
 
 /** Stored, encrypted, with the grant. Holds the only long-lived Google credential. */
@@ -114,11 +116,8 @@ function redirect(location: string, headers?: Headers): Response {
 async function readForm(request: Request): Promise<URLSearchParams | null> {
   const type = request.headers.get('Content-Type') ?? '';
   if (!type.startsWith('application/x-www-form-urlencoded')) return null;
-  const length = Number(request.headers.get('Content-Length') ?? '0');
-  if (length > MAX_BODY_BYTES) return null;
-  const text = await request.text();
-  if (text.length > MAX_BODY_BYTES) return null;
-  return new URLSearchParams(text);
+  const text = await readTextCapped(request.body, MAX_BODY_BYTES);
+  return text === null ? null : new URLSearchParams(text);
 }
 
 /** The redirect-URI allowlist, checked before anything is shown or any redirect is sent. */
@@ -203,6 +202,8 @@ async function handleCallback(request: Request, env: Env, config: Config): Promi
   };
 
   if (params.get('error')) return fail('google_cancelled', 'Sign-in cancelled', 'Nothing was shared.');
+  // The allowlist may have changed since the consent page: check it again before going any further.
+  if (!canRedirect) return fail('redirect_not_allowed', 'This app is not approved', 'The owner of this server has not approved this app.');
   const code = params.get('code');
   if (!code || !resumed.data?.verifier) return fail('no_code', 'Sign-in failed', 'Google did not complete the sign-in. Try again.');
 
@@ -247,7 +248,8 @@ async function handleCallback(request: Request, env: Env, config: Config): Promi
 
   const props: GrantProps = {
     sub: identity.sub,
-    email: identity.email,
+    // Kept only when Google verified it, because later allowlist re-checks treat a stored email as verified.
+    email: identity.emailVerified ? identity.email : undefined,
     channelId,
     googleRefreshToken: tokens.refreshToken,
     googleAccessToken: tokens.accessToken,
@@ -297,17 +299,19 @@ const defaultHandler = {
 // The MCP endpoint
 // ---------------------------------------------------------------------------
 
-const memoryLimiters = new Map<number, MemoryRateLimiter>();
+/** Anonymous routes get a tight, fixed per-IP limit; the owner's limit comes from configuration. */
+const ANON_PER_MINUTE = 10;
+const memoryLimiters = new Map<string, MemoryRateLimiter>();
 
-function limiterFor(env: Env, config: Config): RateLimiter {
-  if (env.RATE_LIMITER) {
-    const binding = env.RATE_LIMITER;
-    return { allow: async (key) => (await binding.limit({ key })).success };
-  }
-  let limiter = memoryLimiters.get(config.rateLimitPerMinute);
+function limiterFor(env: Env, config: Config, purpose: 'owner' | 'anon'): RateLimiter {
+  const binding = purpose === 'owner' ? env.RATE_LIMITER : env.ANON_RATE_LIMITER;
+  if (binding) return { allow: async (key) => (await binding.limit({ key })).success };
+  const perMinute = purpose === 'owner' ? config.rateLimitPerMinute : ANON_PER_MINUTE;
+  const cacheKey = `${purpose}:${perMinute}`;
+  let limiter = memoryLimiters.get(cacheKey);
   if (!limiter) {
-    limiter = new MemoryRateLimiter(config.rateLimitPerMinute);
-    memoryLimiters.set(config.rateLimitPerMinute, limiter);
+    limiter = new MemoryRateLimiter(perMinute);
+    memoryLimiters.set(cacheKey, limiter);
   }
   return limiter;
 }
@@ -322,12 +326,18 @@ function jsonError(status: number, message: string, headers: Record<string, stri
 // One handler for the isolate; each request gets a fresh McpServer built for its caller.
 const mcp = createMcpHandler(
   (ctx) => {
-    const extra = (ctx.authInfo?.extra ?? {}) as { channelId?: string; googleAccessToken?: string; enableComments?: boolean };
+    const extra = (ctx.authInfo?.extra ?? {}) as {
+      channelId?: string;
+      googleAccessToken?: string;
+      enableComments?: boolean;
+      allowCall?: () => Promise<boolean>;
+    };
     if (!extra.channelId || !extra.googleAccessToken) throw new Error('missing auth context');
     return buildServer({
       client: new YouTubeClient(extra.googleAccessToken, fetch),
       channelId: extra.channelId,
       includeComments: extra.enableComments === true,
+      allowCall: extra.allowCall,
     });
   },
   {
@@ -364,12 +374,23 @@ const apiHandler = {
     if (!props.googleAccessToken || props.googleAccessTokenExpiresAt <= nowSeconds() + 30) {
       return jsonError(401, 'Token expired', { 'WWW-Authenticate': 'Bearer error="invalid_token"' });
     }
-    if (!(await limiterFor(env, config).allow(props.sub))) {
-      logEvent('rate_limited');
-      return jsonError(429, 'Too many requests. Try again in a minute.', { 'Retry-After': '60' });
+    // JSON-RPC batches are refused, so one HTTP request can't carry a hundred tool calls.
+    let forward = request;
+    if (request.method === 'POST') {
+      const body = await readTextCapped(request.body, MAX_BODY_BYTES);
+      if (body === null) return jsonError(413, 'Request too large');
+      if (body.trimStart().startsWith('[')) {
+        logEvent('mcp_refused', { reason: 'batch' });
+        return jsonError(400, 'Batched requests are not accepted. Send one request at a time.');
+      }
+      forward = new Request(request.url, { method: 'POST', headers: request.headers, body });
     }
 
-    return mcp.fetch(request, {
+    // The rate limit counts tool calls (each costs YouTube API quota), not HTTP requests.
+    const limiter = limiterFor(env, config, 'owner');
+    const allowCall = () => limiter.allow(props.sub);
+
+    return mcp.fetch(forward, {
       authInfo: {
         token: ctx.auth.token,
         clientId: ctx.auth.clientId ?? '',
@@ -377,7 +398,7 @@ const apiHandler = {
         expiresAt: ctx.auth.expiresAt,
         resource: new URL(ctx.auth.audience),
         // Server-side only: the factory reads these; nothing here is sent to the client.
-        extra: { channelId: props.channelId, googleAccessToken: props.googleAccessToken, enableComments: config.enableComments },
+        extra: { channelId: props.channelId, googleAccessToken: props.googleAccessToken, enableComments: config.enableComments, allowCall },
       },
     });
   },
@@ -471,12 +492,15 @@ function providerOptions(config: Config): OAuthProviderOptions<Env> {
 
 let cached: { key: string; provider: OAuthProvider<Env> } | null = null;
 
-async function limitRegistration(request: Request, env: Env, config: Config): Promise<Response | null> {
-  const url = new URL(request.url);
-  if (url.pathname !== '/register') return null;
+const ANON_ROUTES = new Set(['/register', '/authorize', '/callback', '/token']);
+
+/** Per-IP limit on the routes anyone can reach without a token; each of them can write to storage. */
+async function limitAnonymous(request: Request, env: Env, config: Config): Promise<Response | null> {
+  const path = new URL(request.url).pathname;
+  if (!ANON_ROUTES.has(path)) return null;
   const ip = request.headers.get('CF-Connecting-IP') ?? 'unknown';
-  if (await limiterFor(env, config).allow(`register:${ip}`)) return null;
-  logEvent('rate_limited', { route: 'register' });
+  if (await limiterFor(env, config, 'anon').allow(`${path}:${ip}`)) return null;
+  logEvent('rate_limited', { route: path.slice(1) });
   return jsonError(429, 'Too many requests', { 'Retry-After': '60' });
 }
 
@@ -488,7 +512,7 @@ export default {
     }
     // Requests must arrive at the configured public URL, so metadata and token audiences agree.
     if (new URL(request.url).origin !== config.publicUrl) return jsonError(421, 'Wrong host');
-    const limited = await limitRegistration(request, env, config);
+    const limited = await limitAnonymous(request, env, config);
     if (limited) return limited;
 
     const key = JSON.stringify([config.publicUrl, config.allowedRedirectUris, config.allowLoopbackRedirects]);

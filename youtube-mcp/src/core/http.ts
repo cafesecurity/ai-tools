@@ -57,8 +57,15 @@ export async function callGoogle(fetchImpl: FetchLike, url: URL, init: RequestIn
 
 /** Reads a body, stopping as soon as it passes the cap (the Content-Length header can be absent or wrong). */
 async function readCapped(response: Response, cap: number): Promise<string> {
-  if (!response.body) return '';
-  const reader = response.body.getReader();
+  const text = await readTextCapped(response.body, cap);
+  if (text === null) throw new UpstreamError('unavailable', 'Google sent an unexpectedly large response.');
+  return text;
+}
+
+/** Reads a stream as UTF-8 text, or returns null as soon as it passes the cap. */
+export async function readTextCapped(body: ReadableStream<Uint8Array> | null, cap: number): Promise<string | null> {
+  if (!body) return '';
+  const reader = body.getReader();
   const chunks: Uint8Array[] = [];
   let total = 0;
   for (;;) {
@@ -67,7 +74,7 @@ async function readCapped(response: Response, cap: number): Promise<string> {
     total += value.byteLength;
     if (total > cap) {
       await reader.cancel();
-      throw new UpstreamError('unavailable', 'Google sent an unexpectedly large response.');
+      return null;
     }
     chunks.push(value);
   }

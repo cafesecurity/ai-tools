@@ -5,12 +5,13 @@ import { buildServer } from '../../src/core/tools';
 import { YouTubeClient } from '../../src/core/youtube';
 import { OTHER_VIDEO, OWN_VIDEO, OWNER_CHANNEL, fakeGoogle, youtubeFixture } from '../helpers';
 
-async function connect(includeComments = false) {
+async function connect(includeComments = false, allowCall?: () => Promise<boolean>) {
   const google = fakeGoogle(youtubeFixture);
   const server = buildServer({
     client: new YouTubeClient('t', google.fetchImpl),
     channelId: OWNER_CHANNEL,
     includeComments,
+    allowCall,
     today: () => new Date('2026-11-12T12:00:00Z'),
   });
   const [clientSide, serverSide] = InMemoryTransport.createLinkedPair();
@@ -104,5 +105,15 @@ describe('tools', () => {
     const body = JSON.parse(text(await client.callTool({ name: 'get_channel_overview', arguments: {} })));
     expect(body.subscribers).toBe(1200);
     expect(body.uploads_playlist_id).toBeUndefined();
+  });
+
+  it('applies the rate limit to every tool call, before Google is called', async () => {
+    let left = 2;
+    const { client, google } = await connect(false, async () => left-- > 0);
+    expect((await client.callTool({ name: 'get_channel_overview', arguments: {} })).isError).toBeFalsy();
+    expect((await client.callTool({ name: 'get_channel_overview', arguments: {} })).isError).toBeFalsy();
+    const third = await client.callTool({ name: 'get_channel_overview', arguments: {} });
+    expect(third.isError).toBe(true);
+    expect(google.calls).toHaveLength(2);
   });
 });
