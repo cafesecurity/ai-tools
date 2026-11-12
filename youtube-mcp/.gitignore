@@ -1,0 +1,16 @@
+node_modules/
+.wrangler/
+dist/
+coverage/
+# Secrets and local settings: never commit
+.dev.vars
+.dev.vars.*
+!.dev.vars.example
+.env
+.env.*
+*.key
+*.pem
+*key*.txt
+*secret*
+!**/*secret*.ts
+!scripts/secret-scan.sh

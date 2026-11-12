@@ -1,0 +1,34 @@
+// Template. No secrets belong in this file: set GOOGLE_CLIENT_SECRET with
+// `npx wrangler secret put GOOGLE_CLIENT_SECRET`. See README.md.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "youtube-mcp",
+  "main": "src/platforms/cloudflare/worker.ts",
+  "compatibility_date": "2026-11-01",
+  // Required for Client ID Metadata Documents: the server may only fetch public addresses.
+  "compatibility_flags": ["global_fetch_strictly_public"],
+  "workers_dev": false,
+  "preview_urls": false,
+  "kv_namespaces": [
+    // Create with: npx wrangler kv namespace create OAUTH_KV, then paste the id here.
+    { "binding": "OAUTH_KV", "id": "REPLACE_WITH_YOUR_KV_NAMESPACE_ID" }
+  ],
+  "ratelimits": [
+    // Platform rate limit per signed-in owner (and per IP for /register). When this binding is present it
+    // replaces RATE_LIMIT_PER_MINUTE, so keep the two in step. namespace_id is any number unique in your account.
+    { "name": "RATE_LIMITER", "namespace_id": "1001", "simple": { "limit": 30, "period": 60 } }
+  ],
+  "observability": { "enabled": true },
+  "vars": {
+    // Non-secret settings. Each one is explained in README.md.
+    "PUBLIC_URL": "https://yt-mcp.example.com",
+    "GOOGLE_CLIENT_ID": "REPLACE.apps.googleusercontent.com",
+    "ALLOWED_GOOGLE_ACCOUNTS": "you@example.com",
+    "ALLOWED_CHANNEL_IDS": "",
+    "ALLOWED_REDIRECT_URIS": "https://claude.ai/api/mcp/auth_callback https://claude.com/api/mcp/auth_callback",
+    "ALLOW_LOOPBACK_REDIRECTS": "false",
+    "ALLOWED_ORIGINS": "",
+    "RATE_LIMIT_PER_MINUTE": "30",
+    "ENABLE_COMMENTS": "false"
+  }
+}
