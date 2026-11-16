@@ -233,7 +233,10 @@ async function handleCallback(request: Request, env: Env, config: Config): Promi
     return refuse('identity', 'Sign-in failed', 'Google did not say who signed in. Try again.');
   }
   if (!isAllowedAccount(config, identity)) {
-    return refuse('account_not_allowed', 'Account not allowed', 'This Google account is not on this server’s allowlist.');
+    // The account's own subject ID is shown to the person who just signed in with it, so the owner
+    // can allowlist by ID (which never changes) without looking it up elsewhere.
+    const id = /^[0-9]{5,40}$/.test(identity.sub) ? ` If it should be, the owner can add sub:${identity.sub} to ALLOWED_GOOGLE_ACCOUNTS.` : '';
+    return refuse('account_not_allowed', 'Account not allowed', `This Google account is not on this server’s allowlist.${id}`);
   }
 
   let channelId: string;
@@ -493,6 +496,28 @@ function providerOptions(config: Config): OAuthProviderOptions<Env> {
 let cached: { key: string; provider: OAuthProvider<Env> } | null = null;
 
 const ANON_ROUTES = new Set(['/register', '/authorize', '/callback', '/token']);
+/** The routes that start or finish a new connection. /token is not one: existing connections refresh through it. */
+const CONNECT_ROUTES = new Set(['/register', '/authorize', '/callback']);
+
+/**
+ * While new connections are closed, nothing that begins one is served: no app registration, no
+ * consent page, no Google sign-in. Refused before the rate limiter and the OAuth library, so these
+ * requests cost no storage writes and trigger no outbound fetch. A sign-in link someone sends the
+ * owner is therefore useless except during the short time the owner has opened connections.
+ */
+function refuseNewConnection(request: Request, config: Config): Response | null {
+  const path = new URL(request.url).pathname;
+  if (config.allowNewConnections || !CONNECT_ROUTES.has(path)) return null;
+  logEvent('authorize_refused', { reason: 'connections_closed' });
+  if (path === '/register') {
+    return jsonError(403, 'New connections are switched off on this server. Its owner can switch them on.');
+  }
+  return refusal(
+    'New connections are switched off',
+    'The owner of this server has closed it to new connections. If that is you, set ALLOW_NEW_CONNECTIONS to true, connect, then set it back to false.',
+    403,
+  );
+}
 
 /** Per-IP limit on the routes anyone can reach without a token; each of them can write to storage. */
 async function limitAnonymous(request: Request, env: Env, config: Config): Promise<Response | null> {
@@ -512,6 +537,8 @@ export default {
     }
     // Requests must arrive at the configured public URL, so metadata and token audiences agree.
     if (new URL(request.url).origin !== config.publicUrl) return jsonError(421, 'Wrong host');
+    const closed = refuseNewConnection(request, config);
+    if (closed) return closed;
     const limited = await limitAnonymous(request, env, config);
     if (limited) return limited;
 

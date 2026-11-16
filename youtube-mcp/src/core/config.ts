@@ -12,6 +12,7 @@ export interface RawSettings {
   ALLOWED_CHANNEL_IDS?: string;
   ALLOWED_REDIRECT_URIS?: string;
   ALLOW_LOOPBACK_REDIRECTS?: string;
+  ALLOW_NEW_CONNECTIONS?: string;
   ALLOWED_ORIGINS?: string;
   RATE_LIMIT_PER_MINUTE?: string;
   ENABLE_COMMENTS?: string;
@@ -35,6 +36,12 @@ export interface Config {
   allowedRedirectUris: string[];
   /** Allow local apps (http://localhost, 127.0.0.1, [::1]) as MCP clients. Off by default. */
   allowLoopbackRedirects: boolean;
+  /**
+   * Whether anyone may start a new connection (register an app, see the consent page, sign in).
+   * Closed unless set to exactly "true". Existing connections keep working and refreshing while it
+   * is closed, so the owner opens it to connect a client and closes it again afterwards.
+   */
+  allowNewConnections: boolean;
   /** Browser origins allowed to call the MCP endpoint. Empty means none (server-to-server only). */
   allowedOrigins: string[];
   rateLimitPerMinute: number;
@@ -154,6 +161,7 @@ export function parseConfig(raw: RawSettings): ConfigResult {
       allowedChannelIds,
       allowedRedirectUris,
       allowLoopbackRedirects,
+      allowNewConnections: (raw.ALLOW_NEW_CONNECTIONS ?? '').trim().toLowerCase() === 'true',
       allowedOrigins,
       rateLimitPerMinute: rate,
       enableComments: (raw.ENABLE_COMMENTS ?? '').trim().toLowerCase() === 'true',

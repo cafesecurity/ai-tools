@@ -88,9 +88,10 @@ Then edit the `vars` in `wrangler.local.jsonc`:
 |---|---|---|
 | `PUBLIC_URL` | yes | The https origin of your server, no path. Requests for any other host are refused. |
 | `GOOGLE_CLIENT_ID` | yes | From step 2. The secret goes in `wrangler secret`, **never** in this file. |
-| `ALLOWED_GOOGLE_ACCOUNTS` | yes | Who may sign in: `sub:<Google subject ID>` (preferred: it never changes and doesn't reveal your address) or email addresses (matched only when Google has verified them), separated by spaces or commas. Your subject ID is the `sub` value Google's userinfo endpoint returns for your account (for example via Google's OAuth 2.0 Playground). |
+| `ALLOWED_GOOGLE_ACCOUNTS` | yes | Who may sign in: `sub:<Google subject ID>` (preferred: it never changes and doesn't reveal your address) or email addresses (matched only when Google has verified them), separated by spaces or commas. The easiest way to find your subject ID: deploy with your email address listed, or with a made-up ID such as `sub:00000`, and sign in once. If the account isn't on the list, the refusal page shows that account's own `sub:…` value for you to copy in. |
 | `ALLOWED_REDIRECT_URIS` | yes | Exact https redirect addresses of the MCP clients you use. For Claude: `https://claude.ai/api/mcp/auth_callback https://claude.com/api/mcp/auth_callback`. |
 | `ALLOWED_CHANNEL_IDS` | no | Pin to specific channel IDs (`UC…`). Empty means the signed-in account's own channel. |
+| `ALLOW_NEW_CONNECTIONS` | to connect | `true` lets a client start a new connection (register, consent page, Google sign-in). Anything else, or leaving it out, means **closed**: those routes answer 403 and cost nothing, while connections you already made keep working and refreshing. Open it to connect a client, then close it again (step 6). |
 | `ALLOW_LOOPBACK_REDIRECTS` | no | `true` lets local apps (`http://localhost`) connect. Off by default: any program on your computer could listen there. |
 | `ALLOWED_ORIGINS` | no | Browser origins allowed to call `/mcp` directly. Empty means none; server-side clients like Claude don't need it. |
 | `ENABLE_COMMENTS` | no | `true` adds the comments tool. Read the caveat above first. |
@@ -106,13 +107,28 @@ npm run deploy        # uses wrangler.local.jsonc
 
 Add a custom domain for the Worker (**Workers → your worker → Settings → Domains & Routes**) matching `PUBLIC_URL`. `workers.dev` and preview URLs are switched off in the template so the server is reachable at one address only.
 
+Then check it from the outside. This needs no credentials and changes nothing:
+
+```sh
+node scripts/live-check.mjs https://YOUR-HOST
+```
+
+It confirms the server describes itself correctly, refuses calls without a valid token, never redirects an unapproved app, and tells you whether new connections are open or closed.
+
 ### 5. Connect your client
 
 In Claude: **Settings → Connectors → Add custom connector**, URL `https://YOUR-HOST/mcp`. You'll see this server's consent page, then Google's sign-in. Only approve a consent page that appears right after you clicked Connect yourself: approving Claude means approving the Claude app, so a link someone else sends you could connect *their* Claude account to your channel. Other MCP clients work the same way once their redirect address is in `ALLOWED_REDIRECT_URIS`.
 
+### 6. Close the door
+
+Once your client is connected and a tool call works, set `"ALLOW_NEW_CONNECTIONS": "false"` in `wrangler.local.jsonc`, run `npm run deploy`, and run `live-check` again: it should say new connections are closed.
+
+From then on nobody can register an app, see the consent page or start a Google sign-in on your server, so a sign-in link someone sends you does nothing, and anonymous requests can't use up your storage quota. Your existing connection carries on, because refreshing a token doesn't count as a new connection. You only need to open it again to connect another client, or if your client has been idle for more than 30 days and asks you to sign in again.
+
 ### Removing access
 
 - **Remove a person:** take them off `ALLOWED_GOOGLE_ACCOUNTS` and redeploy. Their next call is refused, and their next token refresh revokes the Google token. If they never refresh, their Google token stays valid at Google until the grant expires, so for an immediate cut also remove the app at Google's permissions page (below).
+- **Stop new connections:** `ALLOW_NEW_CONNECTIONS` set to `false` (step 6).
 - **Disconnect everything:** remove the app at [myaccount.google.com/permissions](https://myaccount.google.com/permissions). The server's refresh then fails and the client has to sign in again.
 
 ## Local development

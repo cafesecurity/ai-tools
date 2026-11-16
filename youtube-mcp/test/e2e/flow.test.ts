@@ -17,6 +17,7 @@ const BINDINGS = {
   ALLOWED_GOOGLE_ACCOUNTS: 'owner@example.com sub:3333333333',
   ALLOWED_REDIRECT_URIS: CLIENT_REDIRECT,
   ALLOW_LOOPBACK_REDIRECTS: 'false',
+  ALLOW_NEW_CONNECTIONS: 'true',
   ALLOWED_ORIGINS: '',
   RATE_LIMIT_PER_MINUTE: '30',
   ENABLE_COMMENTS: 'false',
@@ -235,7 +236,9 @@ describe('end to end', () => {
     const response = await signIn(clientId, 's'.repeat(43), 'stranger-code');
     expect(response.status).toBe(403);
     expect(response.headers.get('Location')).toBeNull();
-    expect(await response.text()).toContain('Account not allowed');
+    const page = await response.text();
+    expect(page).toContain('Account not allowed');
+    expect(page).toContain('sub:2222222222'); // their own ID, so the owner can allowlist by it
     expect(revoked).toContain('1//rt-stranger');
   });
 
@@ -341,6 +344,41 @@ describe('end to end', () => {
       body: '{}',
     });
     expect(response.status).toBe(401);
+  });
+
+  it('serves nothing that starts a connection while new connections are closed, and keeps existing ones working', async () => {
+    const { ALLOW_NEW_CONNECTIONS: _open, ...unset } = BINDINGS;
+    for (const closedBindings of [{ ...BINDINGS, ALLOW_NEW_CONNECTIONS: 'false' }, unset]) {
+      await mf.setOptions(options(closedBindings));
+      const before = googleCalls.length;
+      const kv = await mf.getKVNamespace('OAUTH_KV');
+      const stored = async () => (await kv.list()).keys.length;
+      const keysBefore = await stored();
+      const registration = await register([CLIENT_REDIRECT]);
+      expect(registration.status).toBe(403);
+      const consent = await call(authorizeUrl(clientId, await s256('c'.repeat(43))));
+      expect(consent.status).toBe(403);
+      expect(consent.headers.getSetCookie()).toEqual([]);
+      expect(await consent.text()).toContain('New connections are switched off');
+      const approve = await call('/authorize', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: 'handle=x&decision=approve' });
+      expect(approve.status).toBe(403);
+      const callback = await call('/callback?state=x&code=owner-code');
+      expect(callback.status).toBe(403);
+      expect(googleCalls.length).toBe(before); // nothing reached Google
+      // Not rate limited either: refused before the limiter, so a flood can't lock the owner out of other routes.
+      const flood: number[] = [];
+      for (let i = 0; i < 12; i++) flood.push((await call('/authorize?client_id=x', undefined, '203.0.113.77')).status);
+      expect(new Set(flood)).toEqual(new Set([403]));
+
+      // The owner's existing connection is untouched: the token still reaches the MCP endpoint, and /token still answers.
+      const mcp = await call('/mcp', { method: 'POST', headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json', Accept: 'application/json, text/event-stream' }, body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/list' }) });
+      expect([401, 403]).not.toContain(mcp.status);
+      const token = await call('/token', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ grant_type: 'refresh_token', refresh_token: 'not-a-token', client_id: clientId }).toString() });
+      expect(token.status).not.toBe(403);
+      // None of the refused requests, nor the invalid /token request, wrote anything to storage.
+      expect(await stored()).toBe(keysBefore);
+    }
+    await mf.setOptions(options(BINDINGS));
   });
 
   it('refreshes through Google, and stops at once when the owner is removed from the allowlist', async () => {

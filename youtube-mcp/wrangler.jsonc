@@ -23,7 +23,9 @@
     // Per-IP limit on the routes anyone can reach (/authorize, /callback, /token, /register).
     { "name": "ANON_RATE_LIMITER", "namespace_id": "1002", "simple": { "limit": 10, "period": 60 } }
   ],
-  "observability": { "enabled": true },
+  // The server's own log lines (event names and short reasons, never tokens or personal data) are kept.
+  // Invocation logs are off: they record request URLs, which include sign-in codes and state values.
+  "observability": { "enabled": true, "logs": { "enabled": true, "invocation_logs": false } },
   "vars": {
     // Non-secret settings. Each one is explained in README.md.
     "PUBLIC_URL": "https://yt-mcp.example.com",
@@ -33,6 +35,9 @@
     "ALLOWED_CHANNEL_IDS": "",
     "ALLOWED_REDIRECT_URIS": "https://claude.ai/api/mcp/auth_callback https://claude.com/api/mcp/auth_callback",
     "ALLOW_LOOPBACK_REDIRECTS": "false",
+    // "true" only while you connect a client. Set it back to "false" and redeploy afterwards:
+    // connections you already made keep working, and nobody can start a new one.
+    "ALLOW_NEW_CONNECTIONS": "true",
     "ALLOWED_ORIGINS": "",
     "RATE_LIMIT_PER_MINUTE": "30",
     "ENABLE_COMMENTS": "false"
