@@ -15,6 +15,13 @@ describe('parseConfig', () => {
     expect(result.config.resource).toBe('https://yt.example.com/mcp');
     expect(result.config.googleRedirectUri).toBe('https://yt.example.com/callback');
     expect(result.config.allowLoopbackRedirects).toBe(false);
+    expect(result.config.allowNewConnections).toBe(false); // closed unless switched on
+    const opened = parseConfig({ ...BASE_SETTINGS, ALLOW_NEW_CONNECTIONS: ' TRUE ' });
+    expect(opened.ok && opened.config.allowNewConnections).toBe(true);
+    for (const value of ['yes', '1', 'false', '']) {
+      const other = parseConfig({ ...BASE_SETTINGS, ALLOW_NEW_CONNECTIONS: value });
+      expect(other.ok && other.config.allowNewConnections).toBe(false);
+    }
     expect(result.config.enableComments).toBe(false);
     expect(result.config.rateLimitPerMinute).toBe(30);
   });
