@@ -45,7 +45,7 @@ MCP client (e.g. Claude) ──OAuth 2.1──▶ this server ──OAuth──�
 
 The code is split so the security logic (`src/core`) is platform-neutral; Cloudflare Workers is the first adapter (`src/platforms/cloudflare`). Porting notes are in [docs/PORTING.md](docs/PORTING.md).
 
-The free Workers plan is enough for one person's normal use. Its main limit is 1,000 KV writes a day, after which writes fail until midnight UTC. Each sign-in step and token refresh writes to KV, so a determined flood of anonymous sign-in requests from many addresses could use that up and block your own sign-ins for the day. The server limits each IP address to 10 such requests a minute. If your server's address is widely known, add a Cloudflare WAF rate-limiting rule for `/authorize`, `/callback`, `/token` and `/register`, or use the Workers Paid plan.
+The free Workers plan is enough for one person's normal use. Its main limit is 1,000 KV writes a day, after which writes fail until midnight UTC. Each sign-in step and token refresh writes to KV, so a determined flood of anonymous sign-in requests from many addresses could use that up and block your own sign-ins for the day. The server limits each IP address to 10 such requests a minute. The free plan also caps Worker requests at 100,000 a day. [docs/EDGE_RULES.md](docs/EDGE_RULES.md) has two free Cloudflare rules that stop most unwanted requests before they reach the Worker; the Workers Paid plan removes the caps.
 
 You'll need Node.js 22+, a Cloudflare account, a Google account with your channel, and a domain or subdomain on Cloudflare for the server (for example `yt-mcp.example.com`).
 
@@ -66,10 +66,12 @@ In the [Google Cloud console](https://console.cloud.google.com/):
 
 1. Create a project (or pick one used only for this).
 2. **APIs & Services → Library**: enable **YouTube Data API v3** and **YouTube Analytics API**.
-3. **Google Auth Platform → Branding / Audience**: user type **External**. Add yourself as a test user while setting up.
+3. **Google Auth Platform → Branding / Audience**: choose the user type.
+   - **Internal**, if you have a Google Workspace organisation *and the Google account that owns the channel is a member of it*. Create the project inside that organisation. Only your organisation's accounts can then sign in at all, Google needs no verification, and you can skip step 6. Use a project of its own, separate from your other apps.
+   - **External** otherwise (a personal Google account, for example). Add yourself as a test user while setting up.
 4. **Data Access**: add the scopes `openid`, `.../auth/userinfo.email`, `.../auth/youtube.readonly` and `.../auth/yt-analytics.readonly`. Nothing else.
 5. **Clients → Create client**: type **Web application**. Authorised redirect URI: `https://YOUR-HOST/callback`. Copy the client ID and secret.
-6. **Audience → Publish app** ("In production"). While an app is in *Testing*, Google expires its refresh tokens after 7 days, so you'd have to sign in weekly. For personal use you don't need Google's verification: you'll see an "unverified app" warning on your own sign-in, which is expected because it's your app.
+6. External only: **Audience → Publish app** ("In production"). While an External app is in *Testing*, Google expires its refresh tokens after 7 days, so you'd have to sign in weekly. For personal use you don't need Google's verification: you'll see an "unverified app" warning on your own sign-in, which is expected because it's your app.
 
 ### 3. Configure
 
