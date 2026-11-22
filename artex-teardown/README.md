@@ -22,11 +22,11 @@ Nothing was built, installed or run. The review read the code only. Every statem
 
 ## The briefing
 
-**What it is.** ARTEX is a web console that runs a small team of AI agents against a target. A main agent talks to the operator, a planner decides what to try next, and workers (three at a time by default) carry it out. They share one record of everything found so far. It runs on a separate AI agent engine and works with any AI model that speaks the Anthropic or OpenAI interfaces.
+**What it is.** ARTEX is a web console that runs a small team of AI agents against a target. A main agent talks to the operator, a planner decides what to try next, and workers (three at a time by default) carry it out. They share one record of everything found so far. It's built on a general-purpose AI agent engine, published under the same account, and works with any AI model that speaks the Anthropic or OpenAI interfaces.
 
 **The capability is the AI model, not the code.** ARTEX contains no exploit library. Its own tools keep records (findings, assets, goals) and manage the platform. The agents attack using a command line, a web browser and standard security tools, and the AI model decides what to type. A better model makes ARTEX more capable without a line of its code changing.
 
-**Its safety catch is off.** The engine it runs on has an approval step for risky actions. ARTEX switches it off for every agent. Its built-in rules stop it doing obvious damage (wiping disks, calling delete functions), but the rule meant to stop data leaving ships switched off. By default it's built not to break the systems it attacks, and nothing in it stops it taking data from them.
+**Its safety catch is off.** The engine it runs on has an approval step for risky actions. ARTEX switches it off for every agent. What's left is a small fixed floor in the engine that refuses four catastrophic commands, and ARTEX's own rules, which stop obvious damage (wiping disks, calling delete functions). The rule meant to stop data leaving ships switched off. By default it's built not to break the systems it attacks, and nothing in it stops it taking data from them.
 
 **Its limits on scope are soft.** An operator can list what's in and out of bounds, and ARTEX blocks government and education domains by default. But those limits are checked only when the agents record a target or hand out work. The commands they actually run are never checked against them.
 
@@ -50,7 +50,7 @@ Nothing was built, installed or run. The review read the code only. Every statem
 
 - **Hunt for consoles** using the fingerprints in [Spotting it](#spotting-it), but expect forks to change branding.
 - **Detect behaviour, not the tool.** The AI writes the commands, so the indicators change from run to run [7]. Alert on what the activity does.
-- **Expect blocks to cause retries, not stops.** ARTEX's own designers wrote that the agent's instinct, when a target blocks it, is to rewrite the command, re-encode it and try again (`guard/guard.go:126-137`). A WAF slows it; it won't stop it.
+- **Expect blocks to cause retries, not stops.** The workers' own instructions say a first block (a filtered request, a 404) doesn't mean a route is exhausted, and to try every way round it before concluding (`agent/worker.go:234`). A code comment says the same of the agent's instinct (`guard/guard.go:126-137`). A WAF slows it; it won't stop it.
 - **Watch cloud logs for stolen keys in use.** Datadog saw ARTEX searching cloud logs for secrets with compromised keys, and abusing public sign-up pools [5].
 - **Plant tripwires.** The agents hunt for credentials [5][6]. Decoy keys and canary tokens that nothing legitimate uses give high-confidence alerts.
 - **Look for the tools it brings:** raw port scans, headless Chromium, command-line HTTP clients, and harvesting of a web app's API endpoints.
@@ -62,6 +62,7 @@ Nothing was built, installed or run. The review read the code only. Every statem
 - **Turn on the safety rules that ship off:** the data-exfiltration rule, per-task allowlists, human approval ("ask") for risky actions.
 - **Enforce scope in the network, not in the tool.** ARTEX's scope checks don't cover the commands its agents run, so a firewall or egress allowlist is the real boundary.
 - **Treat console access as full control of the host.** Custom tools and plugin servers run any code by design, and the built-in "auto" agent can create new ones (`server/platform_tools.go:15-16`).
+- **Keep secrets out of the process environment.** Every command the agents run inherits ARTEX's environment, and the default setups put the model API keys and the database password there (upstream `docker-compose.yml:23-26`; engine `tool/task.go:140-145`). The model can read them, and so could a target that manages to steer it (see [Limits](#limits-of-this-review)).
 - **Handle the recordings as sensitive data.** ARTEX keeps a full, unredacted copy of the web traffic it exchanges with targets.
 
 ## How it works
@@ -85,7 +86,7 @@ flowchart TB
 
 | Piece | What it does | Reference |
 | --- | --- | --- |
-| Engine | A separate AI agent engine, `Autumn-27/norma` v0.4.3, published under the same account as ARTEX. It provides the agent loop, tools, approvals, plugins and memory management. Not reviewed here (see [Limits](#limits-of-this-review)). | `go.mod:6`, `go.sum:1-2` |
+| Engine | `Autumn-27/norma` v0.4.3, published under the same account as ARTEX. Its README calls it a general-purpose agent SDK that doesn't know whether it's driving "a coding agent, a security auditor, or a customer-support bot". It provides the agent loop, the command-line, file and web tools, approvals, hooks, plugins, skills and memory management. Reviewed too; see [The engine underneath](#the-engine-underneath). | `go.mod:6`, `go.sum:1-2`; engine `README.md` |
 | Console | Web console and API, listening on all network interfaces on port 8787 by default. | `cmd/artex/main.go:55` |
 | Shared record | A database of findings, facts, assets and planned work that all agents read and write. | `db/` |
 | Model connection | Anthropic (the default), OpenAI or any OpenAI-compatible service. Optional failover to backup model accounts when one runs out of credit or is revoked; off by default. | `agent/provider.go:153-250`, `llmpool/health.go:1-9`, `server/manager.go:515` |
@@ -122,11 +123,26 @@ Turns are unlimited by default (`agent/mainagent.go:27`). A whole task has no ti
 
 A background engine for automatically looking up and probing every recorded asset exists and starts four workers (`server/manager.go:442`), but nothing in v0.3.15 or v0.3.30 ever sends it work. It's dormant.
 
+### The engine underneath
+
+ARTEX's agents run on `norma` v0.4.3. We fetched its public `v0.4.3` tag and computed Go's module hash over it; it matches the hash ARTEX pins exactly (`h1:DnmOhJPL…`, ARTEX `go.sum:1`), so this is the code ARTEX builds against. ARTEX uses its tool, model, transcript, permission, session, loop, skill, compression, plugin and hook packages. Line references below are for norma v0.4.3 (commit `320ae329`).
+
+- **It isn't a hacking tool.** It's a general agent framework with a standard toolset: read, write and edit files, list and search them, run shell commands, and optional web fetch and search (engine `README.md`). The attack capability comes from what ARTEX gives the model to do with those tools.
+- **Approvals come before hooks.** For each tool call the engine checks approvals first, then runs the host's pre-tool hooks (`harness/tools.go:57-83`). ARTEX's bypass mode allows everything except tools named in a deny rule (`permission/permission.go`, `Evaluate`), and ARTEX sets no deny rules. So ARTEX's own guard, which is a hook, still runs after the bypass. It's the only gate.
+- **A small fixed floor survives bypass.** The shell tool refuses four catastrophic commands in any mode: deleting the root filesystem, a fork bomb, formatting a device and overwriting a disk (`tool/bash.go:17-25, 61-71`). It can't be switched off. The interactive shell tools have no such floor; they always allow (`tool/shell_tools.go:23-33`).
+- **Commands get two minutes by default, ten at most,** and long ones can be moved to the background (`tool/bash.go:86-99`).
+- **Commands inherit the whole environment** of the ARTEX process (`tool/task.go:140-145`). Plugin servers do too (`mcp/stdio.go:33-37`).
+- **Web fetch has no block on internal addresses.** It asks for approval in normal mode; under ARTEX's bypass it's allowed (`tool/webfetch.go:57-62`).
+- **No phoning home.** The engine's only built-in hosts are model providers and search services.
+- **No defence against prompt injection.** The engine doesn't mark tool output as untrusted; only one example app's prompt mentions it (`examples/coding-agent/prompt.go:17`).
+- **No licence file** in v0.4.3, unlike ARTEX (AGPL-3.0).
+
 ## Its safety features, and what they leave out
 
 | Feature | Default | What it covers | What it leaves out | Reference |
 | --- | --- | --- | --- | --- |
-| Engine approvals | **Bypassed for every agent** | Nothing | Everything | `agent/mainagent.go:142`, `planner.go:412`, `worker.go:436`, `chat.go:134`, `goals.go:157` |
+| Engine approvals | **Bypassed for every agent**; no deny rules set | Nothing | Everything | `agent/mainagent.go:142`, `planner.go:412`, `worker.go:436`, `chat.go:134`, `goals.go:157`; engine `permission/permission.go` |
+| Engine safety floor | On; can't be switched off | Four catastrophic commands in the shell tool | Everything else; commands sent through interactive shells | Engine `tool/bash.go:17-25, 61-71`, `tool/shell_tools.go:23-33` |
 | ARTEX's own tools | Always allowed | n/a | Their permission checks return "allowed" unconditionally | `server/orchestration.go:125-127, 137-139`, `server/customtool.go:289-291` |
 | Scope instructions | Text in the agents' prompts | What the model chooses to follow | Anything the model ignores; nothing enforces it | `agent/constraints.go` |
 | Asset gate | On, with a built-in blocklist | Recording assets; handing out work tied to recorded assets | The commands agents run; work with no asset attached. Skipped when recording if the rules can't be read. | `db/asset_intercept_match.go:175-196`, `agent/tools_insert.go:230-250`, `agent/tools.go:1052-1064` |
@@ -171,7 +187,7 @@ Around one in ten exposed consoles also hosted other attack tooling, such as Cob
 - Raw port scans and command-line web clients, at machine speed.
 - Headless Chromium sessions, when browser automation is switched on.
 - Mapping of a web application's API endpoints, then requests to each.
-- Rewritten and re-encoded retries after a block (`guard/guard.go:126-137`).
+- Rewritten and re-encoded retries after a block (`agent/worker.go:234`, `guard/guard.go:126-137`).
 - In cloud environments: stolen long-lived keys used to search logs for more secrets, and abuse of public sign-up pools [5].
 - Some activity is detectable even when the agent fails its goal [10].
 
@@ -190,11 +206,11 @@ Detection engineers' consistent advice is to watch behaviour, because the model 
 
 ## Limits of this review
 
-- **The engine wasn't reviewed.** Approvals, the shell and plugin handling live in `Autumn-27/norma` v0.4.3, which isn't in the ARTEX repository. Its package names suggest a general AI agent engine; we found no public description of it. (A similarly named project, `normahq/norma`, is unrelated.)
+- **The engine was reviewed for what matters to safety:** approvals, hooks, the shell, web fetch, plugins and skills. Its large model-driven context compression package wasn't reviewed in depth. (A similarly named project, `normahq/norma`, is unrelated.)
 - **Static review only.** Nothing was run, so runtime behaviour isn't confirmed.
 - **Prompts weren't analysed in depth,** by choice: they hold the operating detail this report leaves out.
 - **Forks differ.** Findings apply to v0.3.15; the key ones were rechecked in v0.3.30 (approvals bypassed, three workers, scope mechanism removed, exfiltration rule off, blocklist on).
-- **Open question:** ARTEX's agents read content controlled by the target. Whether that content could steer them (prompt injection against the operator) wasn't tested.
+- **Open question: could a target steer ARTEX?** Its agents read content the target controls, such as web pages and server responses. We found no instruction, in ARTEX's prompts or in the engine, to treat that content as data rather than instructions. That was a keyword search, not a test. The agents' commands can also read the operator's model keys and database password from their environment. If a target could steer the agent, those would be at risk. Whether it can wasn't tested.
 - **Who uses ARTEX** is outside this report; see [1] and [6].
 
 ## Appendix A: what was reviewed
@@ -204,6 +220,7 @@ Detection engineers' consistent advice is to watch behaviour, because the model 
 | Surviving upstream copy, tag v0.3.15 (`RuoJi6/ARTEX`) | `a91b27feb7168c1486f827559bc48a589a920012` | 9 Oct 2026 | Line references in this report |
 | FailSafe source build (`failsafe-security/artex`) | `fd6376ca392e9eed093f4e627138f0003223579d` | 17 Nov 2026 | Provenance notes, audit, deployment hardening |
 | Surviving upstream copy, tag v0.3.30 | `6997a4661921395072290becc50380db8dacb04e` | 14 Nov 2026 | Spot check of key findings |
+| Engine `Autumn-27/norma`, tag v0.4.3 | `320ae32989da97dd91469bb89164cbfe87d83d5d` | 29 Sep 2026 | The engine ARTEX builds against; module hash matches ARTEX's `go.sum` |
 
 The original repository (`Autumn-27/artex`) is no longer available. The FailSafe build is a source rebuild of v0.3.15 with full capability kept; it isn't a reduced version. Its notes say the Go files are identical to v0.3.15 apart from listed changes, but a direct comparison found changes in ten production Go files. They affect prompt ordering, the browser plugin's launch command, address parsing, tool ordering, self-update and file serving, and none changes the findings here. The FailSafe README promotes the company's hosted service, so its audit was treated as a vendor document and checked against the code. We don't link the source repositories; the commit hashes above let researchers find and verify them.
 
@@ -244,6 +261,22 @@ Paths and lines are for v0.3.15 (`a91b27fe`) unless marked FailSafe.
 | FailSafe changes and backdoor notes | FailSafe `UPSTREAM.md:14-17, 28-30, 93-105` |
 | FailSafe residual risk | FailSafe `SECURITY.md:36-37, 68-69` |
 | FailSafe deployment hardening | FailSafe `docker-compose.safe.yml:34-39` |
+| Worker instructions on blocks | `agent/worker.go:234` |
+| Secrets in the default environment | upstream `docker-compose.yml:23-26`; FailSafe `docker-compose.safe.yml:29-32` |
+
+Engine references, for `norma` v0.4.3 (`320ae329`):
+
+| Finding | Reference |
+| --- | --- |
+| Self-description, package list | `README.md` |
+| Approval pipeline; bypass allows all but deny rules | `permission/permission.go:86-136` |
+| Approvals checked before pre-tool hooks | `harness/tools.go:57-83` |
+| Fixed floor of four catastrophic commands | `tool/bash.go:17-25, 61-71` |
+| Interactive shell tools always allow | `tool/shell_tools.go:23-33` |
+| Shell timeouts | `tool/bash.go:86-99` |
+| Commands and plugin servers inherit the environment | `tool/task.go:140-145`; `mcp/stdio.go:33-37` |
+| Web fetch approval, no internal-address block | `tool/webfetch.go:57-62` |
+| Only mention of untrusted tool output | `examples/coding-agent/prompt.go:17` |
 
 ## Appendix C: sources
 
@@ -261,3 +294,4 @@ Paths and lines are for v0.3.15 (`a91b27fe`) unless marked FailSafe.
 ## Revision history
 
 - 22 Nov 2026: first version.
+- 22 Nov 2026: added the engine review (norma v0.4.3, hash-verified); secrets in the agents' environment; the workers' instructions on blocks; updated the open question on prompt injection.
